@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from scripts.build_site import ROOT, build
 
@@ -75,6 +76,13 @@ class PlaygroundTests(unittest.TestCase):
             self.assertNotIn("{{VERSION}}", (target / "index.html").read_text())
             self.assertFalse((target / "HANDOFF.md").exists())
             self.assertFalse((target / ".tincan").exists())
+
+    def test_build_rejects_source_directories_before_any_mutation(self):
+        with patch("scripts.build_site.shutil.rmtree", side_effect=AssertionError("unsafe removal")), \
+             patch.object(Path, "mkdir", side_effect=AssertionError("unsafe creation")):
+            for target in (ROOT, ROOT.parent, ROOT / "tenioha", ROOT / "site", ROOT / "tests", ROOT / ".git"):
+                with self.subTest(target=target), self.assertRaisesRegex(ValueError, "destination"):
+                    build(target)
 
 
 if __name__ == "__main__":

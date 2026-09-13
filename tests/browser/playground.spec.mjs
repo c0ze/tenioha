@@ -100,6 +100,31 @@ test.describe.serial("Tenioha in a real browser", () => {
     await expect(page.locator("#output")).toHaveText("42\n");
   });
 
+  test("keyboard focus reaches Stop and returns without interrupting editor composition", async () => {
+    await page.locator("#source").fill(expensive);
+    await page.locator("#run").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#stop")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#run")).toBeFocused();
+    await expect(page.locator("#error")).toContainText("Stopped.");
+    await page.locator("#source").fill("42");
+    await page.locator("#check").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#check")).toBeEnabled({ timeout: 70_000 });
+    await expect(page.locator("#check")).toBeFocused();
+    await page.locator("#source").focus();
+    await page.locator("#source").dispatchEvent("keydown", {
+      key: "Enter", ctrlKey: true, isComposing: true,
+    });
+    await expect(page.locator("#stop")).toBeHidden();
+    await page.keyboard.press("Control+Enter");
+    await expect(page.locator("#run")).toBeEnabled({ timeout: 70_000 });
+    await expect(page.locator("#source")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#source")).not.toBeFocused();
+  });
+
   test("example links, argument swap, keyboard shortcut, and download work", async () => {
     await page.locator('[data-example="fizzbuzz"]').click();
     await expect(page.locator("#example")).toHaveValue("fizzbuzz");
@@ -127,6 +152,8 @@ test.describe.serial("Tenioha in a real browser", () => {
         `width ${width}`,
       ).toBe(true);
       await expect(page.locator("#source")).toBeVisible();
+      await expect(page.locator("#example")).toHaveAccessibleName("EXAMPLE");
+      await expect(page.locator("#download")).toHaveAccessibleName("Download .ten");
     }
     expect(failures).toEqual([]);
   });

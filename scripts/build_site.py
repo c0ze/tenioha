@@ -14,8 +14,11 @@ from tenioha.core import read_source
 
 def build(destination=ROOT / "dist"):
     destination = Path(destination)
-    if destination.resolve() == ROOT or destination.resolve() in ROOT.parents:
-        raise ValueError("The build destination cannot replace the repository or its parents.")
+    resolved = destination.resolve()
+    if (resolved == ROOT or resolved in ROOT.parents or
+            (ROOT in resolved.parents and resolved != ROOT / "dist")):
+        raise ValueError("The build destination must be dist/ or outside the repository, "
+                         "and cannot replace a repository parent.")
     if destination.exists():
         shutil.rmtree(destination)
     destination.mkdir(parents=True)

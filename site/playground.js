@@ -13,6 +13,7 @@ let worker;
 let active;
 let timer;
 let requestId = 0;
+let focusAfterRun;
 
 function controls(busy) {
   for (const id of ["run", "check", "reset", "download", "example"]) {
@@ -52,9 +53,12 @@ function loadExample(id, updateHash = false) {
 }
 
 function finish() {
+  const restoreFocus = document.activeElement === $("stop");
   clearTimeout(timer);
   active = undefined;
   controls(false);
+  if (restoreFocus) focusAfterRun?.focus();
+  focusAfterRun = undefined;
 }
 
 function terminate(message) {
@@ -121,8 +125,12 @@ function run(checkOnly = false) {
     status.textContent = "Input is too large";
     return;
   }
+  const trigger = document.activeElement;
+  const buttonTriggered = trigger === $("run") || trigger === $("check");
+  focusAfterRun = buttonTriggered ? trigger : source;
   active = { id: ++requestId, checkOnly };
   controls(true);
+  if (buttonTriggered) $("stop").focus();
   output.textContent = "";
   output.classList.remove("output-placeholder");
   error.textContent = "";

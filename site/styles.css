@@ -1109,7 +1109,15 @@ kbd {
     flex: 1;
   }
   .example-control label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   select {
     min-width: 0;
@@ -1122,13 +1130,6 @@ kbd {
     gap: 12px;
   }
   .editor-tools .tool-button {
-    font-size: 10px;
-  }
-  #download {
-    font-size: 0;
-  }
-  #download::before {
-    content: "Save .ten";
     font-size: 10px;
   }
   #download > span {

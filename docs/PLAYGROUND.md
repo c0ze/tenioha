@@ -55,6 +55,9 @@ runtime load has a separate 60-second timeout and depends on the CDN connection.
 Partial output from an interrupted worker is discarded. Completed runtime
 errors preserve output written before the error; static errors produce none.
 Output is capped at 64,000 characters, source at 100,000, and input at 20,000.
+The browser counts source and input in UTF-16 code units: most Japanese
+characters count as one, while emoji and some rare kanji count as two. The Python
+adapter also enforces its limits independently using Unicode code points.
 These are usability limits, not a general untrusted-code sandbox or a strict
 browser memory cap. Normal language nesting and call limits also apply.
 
