@@ -65,5 +65,11 @@ Chromium tests passed, including the new keyboard-focus regression and mobile
 accessible-name assertions. Desktop and mobile screenshots were inspected, with
 no page or console errors; the wider mobile download label was checked visually.
 Local browser verification used Node 20.20.2 with Playwright 1.63.0 and its pinned
-Chromium 153 binary; the publication workflow uses Node 22. Publication and live
-verification are recorded in HANDOFF.md.
+Chromium 153 binary; the publication workflow uses Node 22.
+
+The [GitHub Actions publication](https://github.com/c0ze/tenioha/actions/runs/34777327550)
+passed both Python jobs, the browser suite, and deployment. All nine browser tests
+then passed against [the public site](https://c0ze.github.io/tenioha/) in 33.7
+seconds on 2026-09-14. A separate fresh-page Fibonacci run produced the expected
+sequence and no page/console errors; its full-page screenshot was inspected.
+Milestone status is recorded in [HANDOFF.md](../../../HANDOFF.md).

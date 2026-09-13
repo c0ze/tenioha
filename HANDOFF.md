@@ -35,9 +35,11 @@ Original reports, follow-ups, and finding dispositions are in
 `/tmp/tenioha-audit-YEdpGq`, `/tmp/tenioha-closeout-hc1fqpb8`, and local `.tincan/`
 (excluded from git). Do not repeat the original full-project review.
 
-Current task: add Fibonacci, FizzBuzz, primes, and related teaching examples,
-plus a GitHub Pages introduction and working browser playground. Implementation
-is on `feature/examples-playground`, based on `8d83495`. Five new standalone
+The examples and playground task is **complete**: Fibonacci, FizzBuzz, primes,
+and related teaching examples, plus a GitHub Pages introduction and working
+browser playground. Implementation
+was prepared on `feature/examples-playground`, based on `8d83495`, and merged
+and pushed to `master` at `6cfdd4e`. Five new standalone
 examples bring the catalog to 18. The site runs the unchanged 0.7.1 interpreter
 through pinned Pyodide 0.29.3 in a disposable worker. Native tests pass 335 cases
 on Python 3.11.15 and 3.14.7; nine real Chromium tests cover the full catalog,
@@ -49,8 +51,14 @@ follow-up review of that commit. No reviews or implementation fixes remain.
 Request/reply files are in `/tmp/tenioha-playground-review`; do not repeat them.
 Original reports and finding dispositions are in
 [the feature review record](docs/reviews/2026-09-14-playground/README.md).
-Pages has been enabled with GitHub Actions as its publishing source; the feature
-has not yet been merged or deployed. Publication is the remaining step. See
+The site is live at **[c0ze.github.io/tenioha](https://c0ze.github.io/tenioha/)**,
+also set as the repository homepage. Pages uses GitHub Actions with HTTPS enforced.
+The first [deployment workflow](https://github.com/c0ze/tenioha/actions/runs/34777327550)
+passed both Python jobs, browser tests, and deployment. All nine browser tests
+then passed against the public `/tenioha/` URL (33.7 seconds), including all 18
+examples and the follow-up accessibility regressions. A fresh live Fibonacci
+run produced 0 through 89 with no page or console errors. No implementation,
+review, or publication work remains. See
 [PLAYGROUND.md](docs/PLAYGROUND.md) for building, serving, tests, and deployment.
 
 ## Milestones
@@ -66,7 +74,7 @@ has not yet been merged or deployed. Publication is the remaining step. See
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
 | Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
 | Multi-model audit | Complete (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, Claude/Kimi/Grok closeout passes and recorded dispositions |
-| Examples and playground | Implemented and reviewed; publication in progress | Five algorithms, 18-example browser catalog, project introduction, worker runtime, and Pages workflow |
+| Examples and playground | Complete and published | Five algorithms, 18-example browser catalog, project introduction, worker runtime, Pages deployment, and Claude/Kimi/Grok review passes |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
@@ -152,6 +160,9 @@ Latest verification: **335 tests passed on Python 3.11.15 and 3.14.7** on
 2026-09-14. This includes the 322-test audited baseline and 13 algorithm/adapter/
 site-build tests. **Nine Chromium browser tests pass**, including every bundled
 example through the real Pyodide runtime. `git diff --check` passed.
+The same browser suite also passed on the live GitHub Pages site on 2026-09-14.
+Screenshots from local desktop/mobile checks and the live site are in
+`/tmp/tenioha-playground-review/` (temporary evidence; not required to build).
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
 in `test_types.py`, `test_function_values.py`, `test_modules.py`, and the CLI
