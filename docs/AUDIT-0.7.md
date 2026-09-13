@@ -1,12 +1,14 @@
 # Tenioha 0.7 audit
 
 Date: 2026-09-13. Baseline: `40c2e08` (0.7.0). Fix version: **0.7.1**.
+Closeout completed: 2026-09-14, implementation commit `65867a8`.
 The user requested independent Claude, Kimi, and Grok reviews and necessary fixes.
 All three completed read-only full-project reviews through local tincan agents.
 The untouched baseline passed 305 tests on Python 3.14.7 and 3.11.15; there were
 no open GitHub issues at the start of the audit.
 
-The original reports are retained verbatim. Their probe counts and model/version
+The original report text is retained, with trailing whitespace normalized for
+repository checks. Their probe counts and model/version
 claims are reviewer-reported; the verified results below are the orchestrator's
 own checks. In particular, the original blanket claim that type recursion had
 enough stack headroom was disproved and corrected in the follow-up.
@@ -15,6 +17,11 @@ enough stack headroom was disproved and corrected in the follow-up.
 - [Kimi original report](reviews/2026-09-13-0.7/kimi.md)
 - [Grok original report](reviews/2026-09-13-0.7/grok.md)
 - [Claude verification of the composed-type failure](reviews/2026-09-13-0.7/claude-depth-followup.md)
+- [Claude final implementation review](reviews/2026-09-13-0.7/claude-final.md)
+- [Kimi final round 1](reviews/2026-09-13-0.7/kimi-round-1.md)
+- [Kimi final round 2](reviews/2026-09-13-0.7/kimi-round-2.md)
+- [Grok final round 1](reviews/2026-09-13-0.7/grok-round-1.md)
+- [Grok final round 2](reviews/2026-09-13-0.7/grok-round-2.md)
 
 ## Accepted findings and fixes
 
@@ -74,7 +81,8 @@ as in files. Only one BOM at the start of source is skipped.
 
 ## Verification and review status
 
-- 322 tests pass on Python 3.11.15 and Python 3.14.7 after the implementation fixes.
+- 322 tests pass on Python 3.11.15 and Python 3.14.7 after the implementation fixes,
+  freshly verified by the resuming orchestrator on 2026-09-14.
 - New tests cover the composed-type failures, 600-level type operations, generic
   owner/effect/choice preservation, BOM positions, six line-ending forms, mixed
   lines, comment termination, alias diagnostics, and entry-path errors.
@@ -88,7 +96,52 @@ as in files. Only one BOM at the start of source is skipped.
   reader each removed one BOM. [Codex's report](reviews/2026-09-13-0.7/codex-round-1.md)
   is retained. The correction centralizes BOM handling in the reader, adds
   double-BOM entry/import tests, and preserves file string line endings noted
-  by Kimi. Round 2 reviews these corrections before landing.
+  by Kimi. Claude's final report and Kimi/Grok round 2 pass the corrected
+  implementation at `65867a8`.
+
+Earlier reviewer reports used Python 3.14.3, while the orchestrator's verification
+uses 3.14.7; both also tested 3.11.15. These are separately recorded executions.
+The original model/version and probe-count claims are retained as reported,
+without attributing them to the orchestrator's own checks.
+
+## Resumed closeout — 2026-09-14
+
+After the prior orchestrator reached quota, all three existing reviewers received
+a bounded request to verify the final implementation and correction. They worked
+read-only and returned independent passes. No further implementation changes
+were needed after `65867a8`; the closeout changes retain reports, finish the
+handoff, and document the literal-newline behavior in the README.
+
+| Reviewer | Implementation inspected | Result | Report |
+|---|---|---|---|
+| Claude | `65867a8`, including `94f5b09..65867a8` | PASS; no blocking findings | [Closeout](reviews/2026-09-14-0.7.1-closeout/claude.md) |
+| Kimi | `65867a8`, including `94f5b09..65867a8` | PASS; no blocking findings | [Closeout](reviews/2026-09-14-0.7.1-closeout/kimi.md) |
+| Grok | `65867a8`, including `94f5b09..65867a8` | PASS; no blocking findings | [Closeout](reviews/2026-09-14-0.7.1-closeout/grok.md) |
+
+This completes the original audits, two implementation-review rounds, and the
+resumed closeout. Claude's earlier final report already included the correction;
+Kimi and Grok verified it in round 2. The supplemental Codex round-1 finding and
+fix remain recorded above; no completed Codex round-2 report was recovered.
+
+Closeout note dispositions:
+
+- **Stale progress and counts:** the handoff now records the completed review
+  and fresh 322-test result, retaining 305 only as the pre-fix baseline.
+- **Literal newline release note:** the README now explicitly states that CR
+  and CRLF in file string literals retain their original characters.
+- **Python version discrepancy:** preserve the reviewers' reported 3.14.3 runs.
+  The resuming orchestrator directly verified `sys.executable` and `sys.version`:
+  `/usr/bin/python` resolves to `/usr/bin/python3.14`, version **3.14.7**, and
+  `/home/arda/.local/bin/python3.11` resolves to the uv installation of **3.11.15**.
+  Both passed 322 tests, all 13 examples and `--check` fixtures, and all 23 guide
+  snippets plus the inline generic alias example. Claude's claim that 3.14.7
+  was unavailable in its environment does not invalidate these separate runs;
+  the README's verified versions are retained.
+- **Optional follow-ups:** the closed set of comment line endings, host repr,
+  case-insensitive filesystem testing, and test portability observations remain
+  the documented scope decisions above. No new blocking behavior was reported.
+- **Report whitespace:** trailing whitespace is normalized when retaining report
+  text so repository whitespace checks apply to review artifacts too.
 
 The interpreter remains a reference implementation with the limits documented in
 [LANGUAGE.md](LANGUAGE.md). This review did not establish an untrusted-code

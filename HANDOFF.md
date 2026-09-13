@@ -1,6 +1,6 @@
 # Tenioha — milestone progress and agent handoff
 
-Updated: 2026-09-13. Repository: `/home/arda/projects/tenioha`.
+Updated: 2026-09-14. Repository: `/home/arda/projects/tenioha`.
 
 ## Current task
 
@@ -21,16 +21,18 @@ implements **0.7.0 explicit aliases**, after reproducing the clean 262-test
 baseline. Alternate function spellings and per-parameter particle choices are
 complete. Final verification is recorded below; no 0.7 work remains outstanding.
 
-Current task: the user requested independent Claude, Kimi, and Grok audits and
-fixes for confirmed findings. Work is on `audit/multi-model-0.7`, based on
-`40c2e08`; the untouched 305-test baseline passed. All three read-only reviews
-completed through local tincan listeners. Original reports, a Claude follow-up,
-and finding dispositions are in [the audit record](docs/AUDIT-0.7.md).
-The **0.7.1** implementation fixes pass 322 tests on Python 3.11.15 and 3.14.7.
-Final review round 1 caught double-BOM file handling and noted literal newline
-translation; both are corrected with entry/import regressions. Round 2 reviews
-the corrections before landing. All 13 examples and 23 guide snippets passed.
-Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/`
+The user requested independent Claude, Kimi, and Grok audits and fixes for
+confirmed findings, then asked to resume after the prior agent reached quota.
+The **0.7.1 audit is complete**, prepared on `audit/multi-model-0.7` from
+`40c2e08`. Implementation commit `65867a8` passes 322 tests on Python 3.11.15 and
+3.14.7, freshly verified on 2026-09-14. Final review round 1 caught double-BOM
+handling and literal newline translation; both are corrected with entry/import
+regressions. Claude, Kimi, and Grok each returned **PASS** in the resumed bounded
+closeout review of that implementation. No blocking findings or unfinished 0.7.1
+implementation work remain; no new feature work is in progress.
+Original reports, follow-ups, and finding dispositions are in
+[the audit record](docs/AUDIT-0.7.md). Review transport files remain in
+`/tmp/tenioha-audit-YEdpGq`, `/tmp/tenioha-closeout-hc1fqpb8`, and local `.tincan/`
 (excluded from git). Do not repeat the original full-project review.
 
 ## Milestones
@@ -45,7 +47,7 @@ Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/
 | Nested patterns | Complete (0.5.0) | Recursive constructor patterns, ordered arms, exhaustiveness and unreachable-case checking |
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
 | Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
-| Multi-model audit | Fixes complete; final review in progress (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, independent reviews and recorded dispositions |
+| Multi-model audit | Complete (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, Claude/Kimi/Grok closeout passes and recorded dispositions |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
@@ -63,10 +65,17 @@ Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/
   numeric words. Both spaced and compact forms use the same checker/evaluator.
 - `typesys.py` defines primitive/nominal/function types, rigid generic variables,
   signature substitution, and type resolution. Generic arguments are explicit;
-  body checking is parametric and runtime bodies are shared.
+  body checking is parametric and runtime bodies are shared. Equality, hashing,
+  formatting, and substitution use explicit stacks because generic composition
+  can create types deeper than any written annotation.
 - `core.py` loads the import graph, hoists types/signatures, checks bodies and
   statements, and evaluates with an explicit stack. It retains the existing
   host builtin API (`Builtin`, `Parameter`, `ValueType`, `Effect`).
+- Entry files and imports share `read_source`, which decodes UTF-8 without
+  newline translation or BOM removal. The tokenizer skips exactly one initial
+  BOM while preserving offsets. Comments and diagnostic locations share six
+  line-break forms: LF, CRLF, CR, NEL, line separator, and paragraph separator.
+  Characters inside strings retain their exact contents.
 - `patterns.py` checks constructor coverage using interned shapes, memoized
   matrix specialization, and an explicit work stack. It preserves correlations
   between fields and produces an uncovered pattern for missing-case errors.
@@ -120,9 +129,9 @@ Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/
 
 ## Verification
 
-Latest verification: **305 tests passed** on Python 3.14.7 on 2026-09-13,
-including the 262-test compact-reader baseline, 40 alias tests, and 3 new CLI
-tests. `git diff --check` also passed.
+Latest verification: **322 tests passed on Python 3.11.15 and 3.14.7** on
+2026-09-14. This includes the 305-test alias baseline and 17 audit regressions
+for composed types, source input, and diagnostics. `git diff --check` passed.
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
 in `test_types.py`, `test_function_values.py`, `test_modules.py`, and the CLI
@@ -157,6 +166,10 @@ constructor patterns/coverage, explicit module re-exports, canonical exception
 order, IO effects, and early diagnostics. CLI checks cover alias output, original
 source spans, `--check` counts without duplicate bodies, and no execution during
 checking. Alias-cycle diagnostics point to the target that closes the cycle.
+The audit regressions cover 600-level type operations, generic composition
+inside nested blocks, type errors before I/O, one initial BOM across input
+paths, double-BOM rejection, literal newline preservation, six source line
+boundaries, original diagnostic offsets, and invalid entry filenames.
 
 All thirteen example files ran with their expected `.out` fixtures and passed
 `--check`, including both greeting input fixtures. Selected examples:
@@ -172,8 +185,10 @@ All thirteen example files ran with their expected `.out` fixtures and passed
 | `aliases.ten` | `8`, `8`, `7`, `11` using alternate names, particle choices, indirect calls, constructor matching, and a closure |
 
 Twenty-three README/language-guide snippets were verified, including the deliberate
-nested-I/O error example. All 35 local documentation links resolve. Python 3.11+ is the
-intended baseline; runtime verification used Python 3.14.7 only.
+nested-I/O error example, plus the corrected inline generic alias example.
+Python 3.11+ is the intended baseline; verification covers Python 3.11.15 and
+3.14.7 on Linux. Reviewers' reports used Python 3.14.3; their recorded
+versions and probe counts are separate from the orchestrator's fresh checks.
 
 ## Known limits
 
@@ -218,9 +233,9 @@ intended baseline; runtime verification used Python 3.14.7 only.
 - Kip checkout: `/home/arda/projects/kip`, inspected revision
   `eed6b0ed5ea397f226ed0f7d52ff8d56410ae4d2`. It was not changed or executed.
 - Public repository: [c0ze/tenioha](https://github.com/c0ze/tenioha), default
-  branch `master`. The preceding 0.6.0 checkpoint is `6383f17`. The 0.7 release
-  commit title is `Add explicit aliases in Tenioha 0.7`; use `git log -1` and
-  `git status -sb` to inspect the actual checkout and remote tracking state.
+  branch `master`. The 0.7.0 release is `40c2e08`; implementation corrections
+  through `65867a8` implement 0.7.1. Use `git log -1` and `git status -sb` to inspect
+  the actual checkout and remote tracking state.
   The user authorized publication and continued development.
 - No repository `AGENTS.md` was found. No third-party packages are required.
 

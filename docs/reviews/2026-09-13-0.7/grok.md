@@ -1,7 +1,7 @@
 # Tenioha 0.7.0 independent audit
 
-**Reviewer:** Grok 4.6  
-**Tree:** `/home/arda/projects/tenioha` at `40c2e08` (`audit/multi-model-0.7`)  
+**Reviewer:** Grok 4.6
+**Tree:** `/home/arda/projects/tenioha` at `40c2e08` (`audit/multi-model-0.7`)
 **Baseline:** `python -m unittest discover -s tests` → **305 passed** (Python 3.14.3)
 
 No in-language semantic bugs showed up in coverage oracles, matching, effects-before-IO, alias identity, call/import/match budgets, or CLI `--check`. The confirmed issues are diagnostic/comment-boundary problems.

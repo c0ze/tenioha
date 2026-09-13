@@ -18,6 +18,12 @@ and closing delimiters; identifier words keep explicit boundaries. Explicit
 alternate function names and parameter-specific particle choices preserve
 the same types, effects, and canonical argument order.
 
+Version 0.7.1 fixes deep generic-type crashes and makes source handling consistent
+across files and embedding. CR and CRLF inside file string literals now retain
+their original characters; earlier file decoding translated them to LF. Comments
+and diagnostic locations share the documented line-ending rules, and all input
+paths accept exactly one initial BOM.
+
 - [Milestone progress and agent handoff](HANDOFF.md)
 - [Current language and builtins](docs/LANGUAGE.md)
 - [Recorded language decisions](docs/DECISIONS.md)
