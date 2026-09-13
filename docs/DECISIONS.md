@@ -113,7 +113,8 @@ M2 selects these additions to the structured core:
   and nominal types. Cache repeated imports, reject cycles, and keep source
   spans from each file. Imported files contain declarations only; all their
   bodies are checked before any entry-file execution. All own declarations are
-  exported; imports are not automatically re-exported. There is no package
+  exported; imports are not automatically re-exported. (`別名` here is the M2
+  placeholder for a module name; 0.7 reserves that word as a keyword.) There is no package
   search path or module initialization order to infer.
 - The minimal library provides generic list length/map/left-fold and optional
   values/defaults/map in `lib/list.ten` and `lib/option.ten`. Keep these ordinary
@@ -223,3 +224,53 @@ Japanese remain separate proposals.
 
 The acceptance program compares compact argument permutations, matches nested
 constructors, and uses a capturing closure with a generic library operation.
+
+## 2026-09-13: 0.7 explicit names and particle choices
+
+Add two explicit, orthogonal declarations without a morphology dependency:
+
+```text
+関数 加える (元:整数)に|へ (量:整数)を -> 整数 { (元 に 量 を 足す) }
+別名 加えます は 加える。
+(5へ 3を 加えます)
+```
+
+Particle choices belong to a single parameter. Resolve each accepted label to
+that slot before checking completeness, duplication, types, or evaluation order.
+Supplying both `に` and `へ` above is a duplicate argument, not a second role.
+All labels in a signature must be distinct, including alternatives within a
+group and across groups. Do not use value types to disambiguate repeated labels.
+The eight existing particles remain the only choices; there is no global
+equivalence of Japanese particles and no change to the builtin signatures.
+
+Use the same choice syntax for functions, procedures, closures, constructors,
+and structural function types: `関数[整数 に|へ, 整数 を -> 整数]`. Each slot
+retains its complete accepted set through references, generic substitution,
+imports, and indirect application. Choice order within a slot is immaterial;
+parameter slot order remains significant for types and argument evaluation.
+Require exact sets rather than introducing subtyping or coercions. Calls and
+constructor patterns supply exactly one label per slot, without `|` syntax.
+
+An alternate name targets a whole named declaration, including a builtin or
+qualified imported function. Preserve the canonical implementation/body key,
+generic parameter identities, result type, and effect; do not add a wrapper.
+Specialize generics at calls and references, never at an alias declaration.
+Constructor aliases preserve nominal identity and represent the same coverage
+case. The matcher can use either spelling and any declared particle choice.
+
+Aliases share the function namespace and are file-scoped declarations. Hoist
+them after real signatures, resolve forward chains iteratively, and reject
+unknown targets, cycles, and duplicate names before all program execution.
+Check unused imported aliases too. Export aliases under their own names;
+an alias of an imported function is an explicit re-export. Imports remain
+non-transitive, and type aliases and aliases of lexical values are not added.
+
+Reserve `別名` as a keyword. This requires renaming identifiers with that exact
+spelling in older source. Polite spellings have to be declared explicitly and
+retain the target's effect; there is no automatic conjugation or suffix stripping.
+
+Acceptance cases cover alternate spellings in direct and indirect calls, both
+particle choices under permutations, duplicate aliases, generic factories and
+closures, same-constructor matching, explicit module re-exports, unchanged IO
+checks, and canonical argument failure order. `examples/aliases.ten` prints
+`8`, `8`, `7`, and `11` using these features together.

@@ -72,7 +72,7 @@ class CLITests(unittest.TestCase):
         for args in [(), ("examples/arithmetic.ten", "--eval", "1")]:
             with self.subTest(args=args):
                 self.assertEqual(self.cli(*args).returncode, 2)
-        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.6.0\n")
+        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.7.0\n")
 
     def test_algebraic_values_function_values_and_check_counts(self):
         result = self.cli("--eval", "型 箱<T> { 包む (値: T) を } (7 を 包む<整数>) 参照 引く")
@@ -133,6 +133,32 @@ class CLITests(unittest.TestCase):
         result = self.cli("--eval", '(「early」を 表示する)(5から3を引く)')
         self.assertEqual((result.returncode, result.stdout), (1, ""))
         self.assertIn("E_TOKEN", result.stderr)
+
+    def test_alias_example_and_check_counts(self):
+        path = ROOT / "examples" / "aliases.ten"
+        result = self.cli(str(path))
+        self.assertEqual((result.returncode, result.stdout, result.stderr),
+                         (0, path.with_suffix(".out").read_text(), ""))
+        check = self.cli("--check", str(path))
+        self.assertEqual((check.returncode, check.stdout, check.stderr),
+                         (0, "OK: 8 statement(s), 1 definition(s), 1 type(s) checked.\n", ""))
+
+    def test_alias_check_does_not_invoke_procedures(self):
+        source = '別名 読みます は 読む。別名 表示します は 表示する。(読みます)(「early」を 表示します)'
+        result = self.cli("--check", "--eval", source)
+        self.assertEqual((result.returncode, result.stdout, result.stderr),
+                         (0, "OK: 2 statement(s), 0 definition(s) checked.\n", ""))
+
+    def test_alias_errors_have_original_spans_before_output(self):
+        sources = [('別名 新名 は 不明', "<eval>:2:9: E_ALIAS"),
+                   ('別名 甲 は 乙。別名 乙 は 甲', "<eval>:2:17: E_ALIAS_CYCLE"),
+                   ('関数 受ける (値:整数)に|へ -> 整数 { 値 } (1に 2へ 受ける)', "E_ARGUMENTS: 受ける: duplicate: へ")]
+        for source, diagnostic in sources:
+            with self.subTest(source=source):
+                result = self.cli("--eval", '(「early」を 表示する)。\n' + source)
+                self.assertEqual((result.returncode, result.stdout), (1, ""))
+                self.assertIn(diagnostic, result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
 
     def test_compact_large_integer_is_independent_of_python_conversion_limit(self):
         digits = "8" * 1000

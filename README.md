@@ -7,14 +7,16 @@ A programming language where **Japanese particles are checked parts of function 
 > whether a sentence's grammar holds together: *「てにをはが合わない」* is
 > what you say when someone's particles are wrong.
 
-Status: **0.6.0 is implemented:** a Python reference interpreter with
+Status: **0.7.0 is implemented:** a Python reference interpreter with
 typed particle calls, user-defined functions/procedures, immutable bindings,
 recursion, lazy conditionals, checked I/O, algebraic data types, explicit generics,
 exhaustive nested constructor matching, function values, and modules. Generic list and
 option libraries are included. Anonymous functions and procedures capture immutable
 lexical values. Matches support ordered arms and wildcard fallbacks, with missing
 and unreachable cases rejected before execution. Particles can touch integers
-and closing delimiters; identifier words keep explicit boundaries.
+and closing delimiters; identifier words keep explicit boundaries. Explicit
+alternate function names and parameter-specific particle choices preserve
+the same types, effects, and canonical argument order.
 
 - [Milestone progress and agent handoff](HANDOFF.md)
 - [Current language and builtins](docs/LANGUAGE.md)
@@ -42,6 +44,7 @@ python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
 python -m tenioha examples/compact.ten
+python -m tenioha examples/aliases.ten
 python -m tenioha --check examples/factorial.ten
 ```
 
@@ -87,6 +90,21 @@ Functions declare particle parameters and their return type:
 答え は (3 を 5 から 差)。
 ((答え を 文字列にする) を 表示する)。
 ```
+
+Declare alternate names and particle choices explicitly:
+
+```text
+関数 加える (元:整数)に|へ (量:整数)を -> 整数 {
+    (元 に 量 を 足す)
+}
+別名 加えます は 加える。
+(((5へ 3を 加えます)を 文字列にする)を 表示する)。
+```
+
+This prints `8`. `に|へ` accepts either particle for one parameter; supplying
+both is an error. The choices remain part of the type through function values,
+closures, and imports. `別名` declares a spelling without automatic conjugation
+or any effect change. See [aliases.ten](examples/aliases.ten) for more examples.
 
 Algebraic types declare constructors with the same particle rules as functions:
 

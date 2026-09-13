@@ -14,7 +14,12 @@ M1 and M2 are complete. Subsequent continuations added anonymous functions and
 lexical closures (0.4.0), then nested constructor patterns and ordered match
 arms (0.5.0). The user then requested a public repository under `c0ze` and
 continued development. The repository is published; compact particle boundaries
-are implemented as version **0.6.0**. Final verification is recorded below.
+were implemented as version 0.6.0 at `6383f17`.
+
+The user resumed from that checkpoint and asked to continue. This continuation
+implements **0.7.0 explicit aliases**, after reproducing the clean 262-test
+baseline. Alternate function spellings and per-parameter particle choices are
+complete. Final verification is recorded below; no 0.7 work remains outstanding.
 
 ## Milestones
 
@@ -27,6 +32,7 @@ are implemented as version **0.6.0**. Final verification is recorded below.
 | Closures | Complete (0.4.0) | Anonymous functions/procedures with immutable lexical captures |
 | Nested patterns | Complete (0.5.0) | Recursive constructor patterns, ordered arms, exhaustiveness and unreachable-case checking |
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
+| Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
@@ -54,11 +60,28 @@ are implemented as version **0.6.0**. Final verification is recorded below.
 - Every body, including unused imported functions, is checked before entry-file
   program I/O. Imports read source files during compilation; imported modules
   contain declarations only. Entry-file statements execute in source order.
-- Calls and constructors require unique exact particle labels. All arguments
-  are pure and evaluate in canonical parameter order. Indirect callees must
-  also be pure and evaluate before arguments.
-- Function types preserve canonical particle order, value types, result type,
-  and effect. Creating an IO reference is pure; calling it is still IO.
+- Parameters may declare particle choices, for example `(元:整数)に|へ`.
+  Choices must be disjoint across a signature. Calls and patterns supply one
+  accepted label per slot; supplying two alternatives for the same slot is a
+  duplicate argument. There is no global particle equivalence.
+- All arguments are pure and evaluate in canonical parameter order. Indirect
+  callees must also be pure and evaluate before arguments. Alternate labels
+  resolve to the same slot before evaluation.
+- Function types preserve canonical parameter order, complete particle choice
+  sets, value types, result type, and effect. Choice order within a slot is
+  normalized; slot order remains significant. Creating an IO reference is pure;
+  calling it is still IO. `FunctionType.aliases` and `Parameter.aliases` retain
+  alternatives through generic substitution and indirect calls.
+- `別名 新名 は 対象` declares a file-scoped alternate function, procedure,
+  or constructor name. `Compiler.aliases` resolves chains iteratively after
+  hoisting real signatures. `Signature.key` retains the original runtime body
+  or builtin identity, including across modules. Aliases add no executable
+  statements, runtime wrappers, or duplicate bodies. Unknown targets, cycles,
+  and collisions are checked even when unused.
+- Alias targets may be qualified imports. An alias is exported under its new
+  name, allowing explicit function/constructor re-exports. It preserves all
+  generic parameters, types, and effects. Constructor aliases retain nominal
+  identity and the same match coverage case. No type aliases are implemented.
 - Closures retain only the free values used by their bodies, including values
   needed by nested closures. Capture snapshots are immutable and survive factory
   returns. Each invocation receives fresh locals. `capture_names` walks checked
@@ -71,7 +94,7 @@ are implemented as version **0.6.0**. Final verification is recorded below.
   order; the first matching body executes. All arms are checked and equally
   typed. Every constructor combination must be covered; wholly covered later
   arms are rejected as unreachable. Repeated outer constructors and partial
-  overlaps are allowed. Fields match by exact particle at every nesting level.
+  overlaps are allowed. Fields match by declared particle choices at every level.
 - `_` and bare binding names match any value, including the whole subject.
   Constructor spellings need parentheses to act as constructor patterns.
   Non-wildcard bindings are unique across a pattern after NFC normalization.
@@ -84,11 +107,9 @@ are implemented as version **0.6.0**. Final verification is recorded below.
 
 ## Verification
 
-Latest verification: **262 tests passed** on Python 3.14.7 on 2026-09-13,
-including the 234-test nested-pattern baseline, 25 compact-reader tests, and 3
-new CLI tests. Earlier missing-space rejection cases now cover ambiguous words
-or missing particles; compact forms have positive coverage. `git diff --check`
-also passed.
+Latest verification: **305 tests passed** on Python 3.14.7 on 2026-09-13,
+including the 262-test compact-reader baseline, 40 alias tests, and 3 new CLI
+tests. `git diff --check` also passed.
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
 in `test_types.py`, `test_function_values.py`, `test_modules.py`, and the CLI
@@ -116,8 +137,15 @@ limits. CLI tests verify examples and source diagnostics before output.
 The compact-reader suite adds all eight labels, signed/large integers, NFC
 particle spans, identifier boundaries, delimiter adjacency across the grammar,
 and unchanged types/effects, evaluation order, modules, and captures.
+The alias suite adds every particle as a choice, argument permutations, duplicate
+slots, exact choice-set type equality, generic substitutions, closures, and host
+builtins. It covers alternate names, forward targets and 1,500-link chains,
+constructor patterns/coverage, explicit module re-exports, canonical exception
+order, IO effects, and early diagnostics. CLI checks cover alias output, original
+source spans, `--check` counts without duplicate bodies, and no execution during
+checking. Alias-cycle diagnostics point to the target that closes the cycle.
 
-All twelve example files ran with their expected `.out` fixtures and passed
+All thirteen example files ran with their expected `.out` fixtures and passed
 `--check`, including both greeting input fixtures. Selected examples:
 
 | Example | Output |
@@ -128,9 +156,10 @@ All twelve example files ran with their expected `.out` fixtures and passed
 | `closure_greeting.ten` | `こんにちは、Ada` twice after one input read |
 | `nested_patterns.ten` | `未設定`, `空`, `一つ`, `複数`, `7` after optional-list matching and a closure capturing the first element |
 | `compact.ten` | `てにをは、少し短く。`, `2`, `2`, `36`, `11` using compact particles, closures, list operations, and nested patterns |
+| `aliases.ten` | `8`, `8`, `7`, `11` using alternate names, particle choices, indirect calls, constructor matching, and a closure |
 
-Twenty README/language-guide snippets were verified, including the deliberate
-nested-I/O error example. All 33 local documentation links resolve. Python 3.11+ is the
+Twenty-three README/language-guide snippets were verified, including the deliberate
+nested-I/O error example. All 35 local documentation links resolve. Python 3.11+ is the
 intended baseline; runtime verification used Python 3.14.7 only.
 
 ## Known limits
@@ -150,12 +179,17 @@ intended baseline; runtime verification used Python 3.14.7 only.
   Coverage follows declared constructor structure and does not prove that
   recursive types have no finite values. Each match has a 50,000-state analysis
   budget; exceeding it produces `E_MATCH_COMPLEXITY` before program I/O.
-- Function types match exactly, including parameter order and effects. No
+- Function types match exactly, including particle choice sets, parameter order,
+  and effects. No
   overloading, implicit conversions, variance, or effect subtyping.
+- Aliases target whole named declarations, not generic specializations, type
+  names, or lexical function values. They cannot be declared inside a block.
+  `別名` is a new keyword in 0.7: rename older identifiers with that spelling.
 - Imported files have no top-level values/initializers, private declarations,
   implicit re-exports, or package search path. `--eval` cannot import; embedding
   can supply a concrete source filename for relative import resolution.
-- No unrestricted unspaced Japanese, automatic conjugation, or inflected aliases.
+- No unrestricted unspaced Japanese or automatic conjugation. Alternate
+  spellings, including polite ones, require explicit alias declarations.
   `5から` and `「猫」を` work, but `値を` remains one name. Keep boundaries
   between words; `5から3を引く` is rejected rather than segmented.
 - Algebraic/function displays omit type arguments and module aliases; they are
@@ -166,13 +200,15 @@ intended baseline; runtime verification used Python 3.14.7 only.
 
 - [Current language guide](docs/LANGUAGE.md)
 - [Design and roadmap](docs/DESIGN.md)
-- [Recorded decisions](docs/DECISIONS.md), including M2 grammar, closures, nested patterns, and compact boundaries
+- [Recorded decisions](docs/DECISIONS.md), including M2 grammar, closures, nested patterns, compact boundaries, and explicit aliases
 - [Research and pinned sources](docs/RESEARCH.md)
 - Kip checkout: `/home/arda/projects/kip`, inspected revision
   `eed6b0ed5ea397f226ed0f7d52ff8d56410ae4d2`. It was not changed or executed.
 - Public repository: [c0ze/tenioha](https://github.com/c0ze/tenioha), default
-  branch `master`. The verified 0.5.0 checkpoint was committed as `701c643` and
-  pushed. The user authorized publication and continued development.
+  branch `master`. The preceding 0.6.0 checkpoint is `6383f17`. The 0.7 release
+  commit title is `Add explicit aliases in Tenioha 0.7`; use `git log -1` and
+  `git status -sb` to inspect the actual checkout and remote tracking state.
+  The user authorized publication and continued development.
 - No repository `AGENTS.md` was found. No third-party packages are required.
 
 ## Resume commands
@@ -189,17 +225,24 @@ python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
 python -m tenioha examples/compact.ten
+python -m tenioha examples/aliases.ten
 python -m tenioha --check examples/lists.ten
 ```
 
 ## Next work (not started)
 
-The M0–M2 roadmap, closures, nested patterns, and constrained compact reader are
-complete. Before extending the surface language, select one later feature and
-record its exact semantics and acceptance examples.
-Candidates from the roadmap include declared particle/inflection aliases,
-`の` projections, and `て` sequencing. Richer
-patterns (literals or guards), tooling/backends, and game embedding are separate work.
+The user has not selected a post-0.7 target. Do not repeat the completed alias
+work. Suggested next milestone: an interactive REPL to make the language easier
+to explore. Before implementing it, specify multiline input, persistent bindings
+and declarations, error recovery, relative imports, and when checking permits
+IO. Acceptance should include defining a function across multiple lines, reusing
+it in later inputs, recovering from an error, and quitting on EOF. This is a
+recommendation, not an approved syntax design or started implementation.
+
+Other roadmap candidates include `の` projections, `て` sequencing, and richer
+patterns (literals or guards). Tooling/backends and game embedding remain separate
+work. Select one bounded milestone and record semantics and acceptance examples
+before implementation.
 
 Preserve whole-program checking before I/O, canonical argument evaluation order,
 NFC names with original spans, nominal module/type identity, immutable lexical

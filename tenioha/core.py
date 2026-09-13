@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 import sys
 from types import MappingProxyType
 from typing import Callable, Mapping, TextIO
 
 from .patterns import CheckedPattern, Coverage
-from .syntax import (Binding, Block, Closure, Conditional, Diagnostic, Expression,
+from .syntax import (AliasDeclaration, Binding, Block, Closure, Conditional, Diagnostic, Expression,
                      FunctionDeclaration, FunctionReference, Import, Literal, Match,
                      Name, Source, Span, Statement, TypeDeclaration, parse)
 from .typesys import (Constructor, DataDefinition, DataType, Effect, FunctionType,
@@ -254,11 +254,13 @@ def resolve_parameters(declarations, environment: TypeEnvironment, variables: Ma
     for parameter in declarations:
         if parameter.name.name in names:
             raise Diagnostic("E_PARAMETER", f"Duplicate parameter name {parameter.name.name!r}.", parameter.name.span)
-        if parameter.particle in particles:
-            raise Diagnostic("E_PARAMETER", f"Duplicate parameter particle {parameter.particle!r}.", parameter.particle_span)
+        for label, span in ((parameter.particle, parameter.particle_span), *parameter.aliases):
+            if label in particles:
+                raise Diagnostic("E_PARAMETER", f"Duplicate parameter particle {label!r}.", span)
+            particles.add(label)
         names.add(parameter.name.name)
-        particles.add(parameter.particle)
-        parameters.append(Parameter(parameter.name.name, parameter.particle, environment.resolve(parameter.type_name, variables)))
+        parameters.append(Parameter(parameter.name.name, parameter.particle, environment.resolve(parameter.type_name, variables),
+                                    aliases=tuple(label for label, _ in parameter.aliases)))
     return tuple(parameters)
 
 
@@ -344,15 +346,16 @@ class Checker:
         return CheckedClosure(CheckedFunction(signature, body), capture_names(body, frozenset(parameter_types)), expression.span)
 
     @staticmethod
-    def roles(name: str, parameters: tuple[Parameter, ...], supplied: list[tuple[str, Span]], head: Span) -> None:
+    def roles(name: str, parameters: tuple[Parameter, ...], supplied: list[tuple[str, Span]], head: Span) -> dict[str, str]:
         seen, duplicates = set(), []
-        expected = {p.particle for p in parameters}
+        canonical = {label: p.particle for p in parameters for label in p.choices}
         for particle, span in supplied:
-            if particle in seen:
+            role = canonical.get(particle, particle)
+            if role in seen:
                 duplicates.append((particle, span))
-            seen.add(particle)
+            seen.add(role)
         missing = [p.particle for p in parameters if p.particle not in seen]
-        unexpected = [(p, span) for p, span in supplied if p not in expected]
+        unexpected = [(p, span) for p, span in supplied if p not in canonical]
         if duplicates or missing or unexpected:
             details = []
             if duplicates:
@@ -363,6 +366,7 @@ class Checker:
                 details.append("unexpected: " + ", ".join(p for p, _ in unexpected))
             span = (duplicates or unexpected)[0][1] if duplicates or unexpected else head
             raise Diagnostic("E_ARGUMENTS", f"{name}: {'; '.join(details)}.", span)
+        return canonical
 
     def pattern(self, pattern, kind: Type, bindings: dict[str, Type]) -> CheckedPattern:
         if isinstance(pattern, Name):
@@ -378,10 +382,10 @@ class Checker:
         if not isinstance(constructor, Constructor) or constructor.result_type.identity != kind.identity:
             raise Diagnostic("E_PATTERN", f"{pattern.constructor.name} is not a constructor of {kind.value}.", pattern.constructor.span)
         constructor = instantiate(constructor, kind.arguments, pattern.constructor.span)
-        self.roles(pattern.constructor.name, constructor.parameters,
-                   [(particle, span) for _, particle, span in pattern.arguments], pattern.constructor.span)
+        roles = self.roles(pattern.constructor.name, constructor.parameters,
+                           [(particle, span) for _, particle, span in pattern.arguments], pattern.constructor.span)
         parameters = {p.particle: p for p in constructor.parameters}
-        fields = {particle: self.pattern(child, parameters[particle].value_type, bindings)
+        fields = {roles[particle]: self.pattern(child, parameters[roles[particle]].value_type, bindings)
                   for child, particle, _ in pattern.arguments}
         return CheckedPattern(constructor, tuple(fields[p.particle] for p in constructor.parameters))
 
@@ -454,19 +458,20 @@ class Checker:
             function = callee.value_type
             if not isinstance(function, FunctionType):
                 raise Diagnostic("E_CALLABLE", f"適用 requires a function value, received {function.value}.", callee.span)
-            parameters = tuple(Parameter(str(index), p, t) for index, (p, t) in enumerate(function.parameters))
+            parameters = tuple(Parameter(str(index), p, t, aliases=function.aliases[index])
+                               for index, (p, t) in enumerate(function.parameters))
         else:
             function = self.resolve_function(expression.head, expression.type_arguments)
             parameters = function.parameters
         self.roles(expression.head.name, parameters, [(a.particle, a.span) for a in expression.arguments], expression.head.span)
-        checked, by_particle = {}, {p.particle: p for p in parameters}
+        checked, by_particle = {}, {label: p for p in parameters for label in p.choices}
         # Diagnose arguments in source order; evaluate in canonical type order.
         for argument in expression.arguments:
             value = self.check(argument.expression, allow_io=False, variables=variables)
             parameter = by_particle[argument.particle]
             if value.value_type != parameter.value_type:
                 raise Diagnostic("E_TYPE", f"{expression.head.name}: {argument.particle} expects {parameter.value_type.value}, received {value.value_type.value}.", argument.expression.span)
-            checked[argument.particle] = value
+            checked[parameter.particle] = value
         if function.effect is Effect.IO and not allow_io:
             raise Diagnostic("E_EFFECT", f"{expression.head.name} performs IO. Arguments and pure contexts cannot perform IO.", expression.head.span)
         return CheckedCall(function, tuple(checked[p.particle] for p in parameters), expression.span, expression.head.span, callee)
@@ -515,7 +520,7 @@ class Compiler:
                 except (OSError, UnicodeError, ValueError, RuntimeError) as error:
                     raise Diagnostic("E_IMPORT", f"Cannot import {item.path!r}: {error}", item.span) from None
                 module.imports[item.alias.name] = self.load(imported_text, str(path), import_span=item.span)
-            elif not root and not isinstance(item, (FunctionDeclaration, TypeDeclaration)):
+            elif not root and not isinstance(item, (FunctionDeclaration, TypeDeclaration, AliasDeclaration)):
                 raise Diagnostic("E_MODULE_BODY", "Imported modules contain declarations only; put execution in the entry file.", item.span)
         self.active.remove(key)
         self.loaded[key] = module
@@ -574,6 +579,33 @@ class Compiler:
                                   type_parameters=generics, identity=key)
             self.register(module, declaration.name, signature)
 
+        self.aliases(module)
+
+    def aliases(self, module: Module) -> None:
+        pending = {}
+        for declaration in module.items:
+            if not isinstance(declaration, AliasDeclaration):
+                continue
+            if declaration.name.name in module.functions or declaration.name.name in pending:
+                raise Diagnostic("E_DUPLICATE_FUNCTION", f"Function or alias {declaration.name.name!r} is already defined.", declaration.name.span)
+            pending[declaration.name.name] = declaration
+        # Follow forward aliases iteratively; aliases keep the target's runtime key.
+        for name in pending:
+            path, seen, target = [], set(), name
+            while target not in module.functions and target in pending:
+                if target in seen:
+                    raise Diagnostic("E_ALIAS_CYCLE", f"Alias cycle involving {target!r}.", path[-1].target.span)
+                seen.add(target)
+                declaration = pending[target]
+                path.append(declaration)
+                target = declaration.target.name
+            if target not in module.functions:
+                raise Diagnostic("E_ALIAS", f"Unknown function, procedure, or constructor {target!r}.", path[-1].target.span)
+            signature = module.functions[target]
+            for declaration in reversed(path):
+                signature = replace(signature, name=declaration.name.name, identity=signature.key)
+                self.register(module, declaration.name, signature)
+
     def check(self, module: Module) -> None:
         environment = TypeEnvironment(module.types)
         for declaration in module.items:
@@ -600,7 +632,7 @@ def compile_source(text: str, *, filename: str = "<input>", allow_io: bool = Tru
     for module in compiler.modules:
         compiler.check(module)
     checker = Checker(root.functions, TypeEnvironment(root.types), compiler.data_definitions)
-    statements = tuple(item for item in root.items if not isinstance(item, (FunctionDeclaration, TypeDeclaration, Import)))
+    statements = tuple(item for item in root.items if not isinstance(item, (FunctionDeclaration, TypeDeclaration, Import, AliasDeclaration)))
     return Program(checker.statements(statements, allow_io=allow_io, variables={}, declared=set()),
                    compiler.definitions, compiler.data_definitions)
 

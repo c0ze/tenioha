@@ -9,7 +9,7 @@ import unicodedata
 
 PARTICLES = frozenset({"が", "を", "に", "で", "から", "へ", "と", "まで"})
 RESERVED = frozenset({"は", "の", "て", "なら"})
-KEYWORDS = frozenset({"関数", "手続き", "もし", "そうでなければ", "型", "場合", "参照", "適用", "取込"})
+KEYWORDS = frozenset({"関数", "手続き", "もし", "そうでなければ", "型", "場合", "参照", "適用", "取込", "別名"})
 MAX_NESTING = 128
 
 
@@ -84,8 +84,8 @@ def tokenize(source: Source) -> tuple[Token, ...]:
     text, tokens, pos = source.text, [], 0
     punctuation = {"(": "OPEN", ")": "CLOSE", "。": "STOP", "{": "BLOCK_OPEN",
                    "}": "BLOCK_CLOSE", ":": "COLON", "<": "TYPE_OPEN", ">": "TYPE_CLOSE",
-                   "[": "SQUARE_OPEN", "]": "SQUARE_CLOSE", ",": "COMMA", ".": "DOT"}
-    boundaries = frozenset("()。「」;{}:<>[],.")
+                   "[": "SQUARE_OPEN", "]": "SQUARE_CLOSE", ",": "COMMA", ".": "DOT", "|": "ALTERNATIVE"}
+    boundaries = frozenset("()。「」;{}:<>[],.|")
     escapes = {"\\": "\\", "」": "」", "n": "\n", "t": "\t"}
     while pos < len(text):
         char = text[pos]
@@ -195,6 +195,7 @@ class TypeExpression:
     result: TypeExpression | None
     effectful: bool
     span: Span
+    particle_aliases: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -247,6 +248,7 @@ class ParameterDeclaration:
     type_name: TypeExpression
     particle: str
     particle_span: Span
+    aliases: tuple[tuple[str, Span], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -313,9 +315,16 @@ class Import:
     span: Span
 
 
+@dataclass(frozen=True)
+class AliasDeclaration:
+    name: Name
+    target: Name
+    span: Span
+
+
 Expression = Literal | Name | Call | Block | Conditional | Match | FunctionReference | Closure
 Statement = Expression | Binding
-TopLevel = Statement | FunctionDeclaration | TypeDeclaration | Import
+TopLevel = Statement | FunctionDeclaration | TypeDeclaration | Import | AliasDeclaration
 
 
 class Parser:
@@ -377,22 +386,31 @@ class Parser:
         if token.kind == "KEYWORD" and token.value in {"関数", "手続き"}:
             self.pos += 1
             self.expect("SQUARE_OPEN", "[ after a function type keyword")
-            parameters = []
+            parameters, aliases = [], []
             while self.current.kind != "ARROW":
                 kind = self.type_expression(depth + 1)
-                particle = self.expect("PARTICLE", "a particle in the function type")
+                particle, alternatives = self.particle_choices()
                 parameters.append((str(particle.value), kind))
+                aliases.append(tuple(str(t.value) for t in alternatives))
                 if self.current.kind != "ARROW":
                     self.expect("COMMA", ", between function type parameters")
             self.pos += 1
             result = self.type_expression(depth + 1)
             close = self.expect("SQUARE_CLOSE", "] after the function result type")
             return TypeExpression(None, (), tuple(parameters), result, token.value == "手続き",
-                                  Span(token.span.source, token.span.start, close.span.end))
+                                  Span(token.span.source, token.span.start, close.span.end), tuple(aliases))
         name = self.name("a type name", qualified=True)
         arguments = self.type_arguments(depth)
         end = self.tokens[self.pos - 1].span.end
         return TypeExpression(name, arguments, (), None, False, Span(name.span.source, name.span.start, end))
+
+    def particle_choices(self) -> tuple[Token, tuple[Token, ...]]:
+        first = self.expect("PARTICLE", "a parameter particle (は is not an argument label)")
+        alternatives = []
+        while self.current.kind == "ALTERNATIVE":
+            self.pos += 1
+            alternatives.append(self.expect("PARTICLE", "a particle after |"))
+        return first, tuple(alternatives)
 
     def parameters(self) -> tuple[ParameterDeclaration, ...]:
         parameters = []
@@ -402,8 +420,9 @@ class Parser:
             self.expect("COLON", ": before the parameter type")
             type_name = self.type_expression()
             self.expect("CLOSE", ") after the parameter type")
-            particle = self.expect("PARTICLE", "a parameter particle (は is not an argument label)")
-            parameters.append(ParameterDeclaration(parameter_name, type_name, str(particle.value), particle.span))
+            particle, alternatives = self.particle_choices()
+            parameters.append(ParameterDeclaration(parameter_name, type_name, str(particle.value), particle.span,
+                                                   tuple((str(t.value), t.span) for t in alternatives)))
         return tuple(parameters)
 
     def program(self) -> tuple[TopLevel, ...]:
@@ -414,6 +433,15 @@ class Parser:
                 statements.append(self.declaration())
             elif keyword == "型":
                 statements.append(self.type_declaration())
+            elif keyword == "別名":
+                opening = self.current
+                self.pos += 1
+                name = self.name("an alternate function name")
+                self.expect("RESERVED", "は before the alias target", "は")
+                target = self.name("a function, procedure, or constructor name", qualified=True)
+                if self.current.kind == "TYPE_OPEN":
+                    raise Diagnostic("E_ALIAS", "Aliases name whole generic functions; specialize at the call or reference.", self.current.span)
+                statements.append(AliasDeclaration(name, target, Span(opening.span.source, opening.span.start, target.span.end)))
             elif keyword == "取込":
                 opening = self.current
                 self.pos += 1

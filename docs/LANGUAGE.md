@@ -1,7 +1,7 @@
-# Tenioha 0.6 — the runnable language
+# Tenioha 0.7 — the runnable language
 
 This describes M0/M1/M2, the 0.4 closure extension, 0.5 nested patterns, and
-0.6 compact particle boundaries.
+0.6 compact particle boundaries, and 0.7 explicit aliases.
 The larger [design](DESIGN.md) also contains future features. Literal patterns,
 guards, and unrestricted unspaced Japanese are not implemented yet. See [the handoff](../HANDOFF.md)
 for milestone progress and [decisions](DECISIONS.md) for the syntax rationale.
@@ -20,6 +20,7 @@ python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
 python -m tenioha examples/compact.ten
+python -m tenioha examples/aliases.ten
 python -m tenioha --eval '(3 を 5 から 引く)'
 python -m tenioha --eval '(真 を 否定する)'
 python -m tenioha --check examples/arithmetic.ten
@@ -39,7 +40,8 @@ source serialization format.
 
 `--check` checks without executing any statement and reports entry statement,
 named function definition, and (when present) algebraic type counts. Anonymous
-closure bodies are checked but do not add to the named definition count. Definition/type
+closure bodies and alias declarations are checked but do not add to the named
+definition count. Definition/type
 counts include imported modules, counting each file once. `--pure` requires pure top-level execution, including when
 combined with `--check`; unused procedure definitions are allowed under their
 declared IO context. Every function body is checked, even if uncalled. The
@@ -72,7 +74,8 @@ and types are preserved.
   separate words, allowing `「猫」を` and `(式)に`. Identifier words, including
   boolean and bare type names, still need separation from their particles.
 - Parentheses, braces, colons, the return arrow `->`, generic delimiters `< >`,
-  function type brackets `[ ]`, commas, and qualification dots are ASCII.
+  function type brackets `[ ]`, commas, qualification dots, and the particle
+  choice separator `|` are ASCII.
   Other fullwidth punctuation/numeral equivalents are
   not rewritten. Japanese punctuation and fullwidth numerals remain valid
   inside strings.
@@ -110,7 +113,7 @@ particle need not have whitespace. This applies consistently to argument
 expressions, constructor patterns, parameter declarations, and function types:
 `(値:整数)を`, `((値 を 有り)を 有り)`, `一覧<整数>を`, and
 `関数[整数 を->整数]で` all have clear boundaries. Imports may similarly use
-`取込「module.ten」と 別名`.
+`取込「module.ten」と 道具`.
 
 Every identifier word is still read in full. `値を`, `たから`, `真を`, and
 `整数を` are single names; write `値 を`, `真 を`, and `整数 を` when a
@@ -122,7 +125,8 @@ Use whitespace or delimiters, without guessing boundaries from known names.
 This extension changes only reading: exact particles, argument evaluation
 order, types, effects, and matching rules are the same. For example,
 `((読む)を 表示する)` is still rejected for nested I/O. Strings and comments
-are unchanged, and automatic verb conjugation or particle aliases are not added.
+are unchanged. Explicit aliases are a separate extension, described below;
+automatic verb conjugation remains unsupported.
 See [compact.ten](../examples/compact.ten) for modules, closures, and nested
 patterns using the shorter notation.
 
@@ -137,16 +141,17 @@ qualified_name = identifier , { "." , identifier } ;
 call       = "(" , { argument } , (qualified_name , [ type_arguments ] | "適用" , expression) , ")" ;
 argument   = expression , particle ;
 particle   = "が" | "を" | "に" | "で" | "から" | "へ" | "と" | "まで" ;
+particle_choices = particle , { "|" , particle } ;
 block      = "{" , { statement , [ "。" ] } , "}" ;
 conditional = "もし" , expression , "なら" , block , "そうでなければ" , block ;
-declaration = function_declaration | type_declaration | import ;
+declaration = function_declaration | type_declaration | alias_declaration | import ;
 function_declaration = ("関数" | "手続き") , identifier , [ type_parameters ] , { parameter } , "->" , type , block ;
-parameter  = "(" , identifier , ":" , type , ")" , particle ;
+parameter  = "(" , identifier , ":" , type , ")" , particle_choices ;
 type       = qualified_name , [ type_arguments ] | function_type ;
 type_parameters = "<" , identifier , { "," , identifier } , ">" ;
 type_arguments = "<" , type , { "," , type } , ">" ;
 function_type = ("関数" | "手続き") , "[" , [ function_parameter , { "," , function_parameter } ] , "->" , type , "]" ;
-function_parameter = type , particle ;
+function_parameter = type , particle_choices ;
 type_declaration = "型" , identifier , [ type_parameters ] , "{" , { constructor , [ "。" ] } , "}" ;
 constructor = identifier , { parameter } ;
 match      = "場合" , expression , "{" , { arm , [ "。" ] } , "}" ;
@@ -154,6 +159,7 @@ arm        = pattern , "なら" , block ;
 pattern    = identifier | "(" , { pattern , particle } , qualified_name , ")" ;
 reference  = "参照" , qualified_name , [ type_arguments ] ;
 closure    = ("関数" | "手続き") , { parameter } , "->" , type , block ;
+alias_declaration = "別名" , identifier , "は" , qualified_name ;
 import     = "取込" , string , "と" , identifier ;
 ```
 
@@ -171,8 +177,9 @@ to invoke a zero-argument function and `参照 読む` to obtain its function va
 
 `は` introduces bindings and `なら` separates a condition from its branches.
 `の` and `て` remain reserved. These words do not act as argument labels.
-Particle matching is exact; `へ` does not stand in for
-`に`. Signatures cannot repeat a label, even with different value types.
+Particle matching follows the declaration; `へ` stands in for `に` only when
+that parameter explicitly declares both. Signatures cannot repeat a label,
+even within a choice group or with different value types.
 
 ## Functions and procedures
 
@@ -203,6 +210,80 @@ Named file-scoped functions see parameters, local values, and file-scoped functi
 do not capture top-level values or caller-local values; pass those explicitly
 as parameters. Value and function names use separate namespaces. A value named
 `引く` does not replace the function selected by a call ending in `引く`.
+
+## Explicit names and particle choices
+
+```text
+関数 加える (元:整数)に|へ (量:整数)を -> 整数 {
+    (元 に 量 を 足す)
+}
+別名 加えます は 加える。
+(5へ 3を 加えます)
+(3を 5に 加える)
+操作 は 参照 加えます。
+(5へ 3を 適用 操作)
+```
+
+All three calls return `8`. `(元:整数)に|へ` declares one parameter accepting
+either `に` or `へ`. The choices are local to this signature: the builtin
+`足す` still accepts only `に` for its first parameter. Supply exactly one
+choice per parameter. `(5に 6へ 3を 加える)` supplies the first parameter
+twice and is rejected with `E_ARGUMENTS`. Missing parameters and wrong value
+types remain errors, whichever label is used.
+
+Choices must be disjoint across a signature. `に|に` and separate parameters
+declaring `に|へ` and `へ` both produce `E_PARAMETER`. Only the eight existing
+argument particles are allowed; `は`, `の`, and `て` retain their grammatical
+roles. Whitespace around `|` is optional. Write choices in declarations and
+function types, and one particle per argument in calls and patterns.
+
+The same syntax applies to procedures, anonymous functions, and constructors.
+Function types retain each slot's complete choice set, for example
+`関数[整数 に|へ, 整数 を -> 整数]`. Within a slot, `に|へ` and `へ|に`
+mean the same type. Parameter slot order still determines argument evaluation
+order and remains part of the type. Choice sets must match exactly: neither
+`関数[整数 に -> 整数]` nor a type with extra choices coerces to
+`関数[整数 に|へ -> 整数]`. Generic substitution and indirect calls preserve
+all choices.
+
+`別名 新名 は 対象` declares another name for a named function, procedure,
+or constructor. The target may be a builtin or a qualified import such as
+`道具.加える`. Both names retain the target's parameters, choices, type
+parameters, result, and effect. Aliases can be called or referenced with `参照`.
+There is no new runtime body or wrapper; a constructor alias is the same
+constructor for nominal typing and exhaustiveness checking. Patterns accept
+either name and any declared choice for each field:
+
+```text
+型 箱<T> { 包む (値:T)を|に }
+別名 包みます は 包む。
+値 は (7に 包みます<整数>)。
+場合 値 { (中 を 包む) なら { 中 } }
+```
+
+The match returns `7`. Adding an otherwise identical arm using `包みます`
+would be unreachable. Constructor aliases do not add cases to an algebraic type.
+
+Alias declarations are file-scoped and hoisted. Forward targets and chains of
+aliases work. Unknown targets (`E_ALIAS`), cycles (`E_ALIAS_CYCLE`), and duplicate
+function names (`E_DUPLICATE_FUNCTION`) are rejected before any program I/O,
+including unused imported declarations. Names share the function namespace,
+so they cannot replace a builtin, constructor, function, or another alias.
+Alias targets are named declarations, not type names or lexical function values.
+Alias a whole generic declaration, then supply type arguments at its calls or
+references: `別名 写します は 写す` followed by `参照 写します<整数>`.
+Specialization in the alias declaration itself is rejected.
+
+Aliases are exported under their new names. A module can explicitly re-export
+an imported function with an alias; imports are still not implicitly re-exported.
+No type alias or global particle equivalence is introduced. Polite names such
+as `表示します` require an explicit declaration and keep the original IO effect.
+No suffix stripping or automatic conjugation is performed.
+
+Compatibility note: `別名` becomes a keyword in 0.7 and can no longer be a value,
+function, type, parameter, or import name. Rename an existing identifier with
+that spelling. Existing spaced and compact programs otherwise retain their rules.
+See [aliases.ten](../examples/aliases.ten) for the complete runnable example.
 
 ## Bindings and blocks
 
@@ -296,8 +377,8 @@ The first matching arm runs. Every arm is checked before execution, all arms
 must return the same type, and only the selected body executes. Arm effects
 inherit the surrounding context.
 
-A constructor pattern uses the same predicate-last structure and exact field
-particles as a constructor call. A field can itself contain a constructor
+A constructor pattern uses the same predicate-last structure and declared field
+particle choices as a constructor call. A field can itself contain a constructor
 pattern, a binding name, or `_`:
 
 ```text
@@ -376,11 +457,12 @@ arguments then evaluate in the function type's canonical parameter order.
 A callee may come from a binding, function result, conditional, match, or closure
 expression. Nested named function declarations remain unsupported.
 
-Function types declare ordered particle/type pairs, a result, and an effect:
+Function types declare ordered particle-choice/type pairs, a result, and an effect:
 `関数[整数 から, 整数 を -> 整数]` or `手続き[文字列 を -> 単位]`.
 A zero-argument function type is `関数[-> 整数]`. Parameter names are not part
-of a function type. Particle order is part of it, because changing that order
-could change which argument failure happens first. Repeated particles are errors.
+of a function type. Parameter slot order is part of it, because changing that order
+could change which argument failure happens first. Choice order within a slot is
+irrelevant; repeated particles are errors.
 Types must match exactly; no parameter variance or effect coercion is provided.
 
 Creating a procedure reference is pure; applying it remains IO. A pure function
@@ -468,14 +550,14 @@ Save this program in the `examples` directory:
 (((値 を 列.長さ<整数>) を 文字列にする) を 表示する)。
 ```
 
-`取込 「relative/path.ten」 と 別名` imports a file relative to the importing
+`取込 「relative/path.ten」 と 道具` imports a file relative to the importing
 file's directory, independently of the process's working directory. Access its
-own types, constructors, and functions through `別名.名前`. Imports are
+own types, constructors, functions, and explicit aliases through `道具.名前`. Imports are
 hoisted. No global module search path, package installation, or absolute import
 path is used. An import through another module is not automatically re-exported.
 
 Imported files contain only type declarations, function/procedure declarations,
-and imports. Top-level value bindings and expressions are rejected, so importing
+alias declarations, and imports. Top-level value bindings and expressions are rejected, so importing
 a module performs no program I/O. Every imported body is checked, even if unused.
 Modules may declare IO procedures; their effects are checked at call sites.
 The entry file retains normal ordered top-level execution.

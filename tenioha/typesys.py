@@ -49,11 +49,32 @@ class FunctionType:
     parameters: tuple[tuple[str, Type], ...]
     result_type: Type
     effect: Effect
+    aliases: tuple[tuple[str, ...], ...] = field(default=(), kw_only=True)
+
+    def __post_init__(self) -> None:
+        aliases = self.aliases or ((),) * len(self.parameters)
+        if len(aliases) != len(self.parameters):
+            raise ValueError("Particle choices must correspond to function parameters.")
+        parameters, normalized, seen = [], [], set()
+        for (particle, kind), alternatives in zip(self.parameters, aliases):
+            choices = (particle, *alternatives)
+            if any(p not in PARTICLES for p in choices):
+                raise ValueError("A function type contains an unsupported particle.")
+            if len(set(choices)) != len(choices) or seen.intersection(choices):
+                raise ValueError("A function type cannot repeat a particle across its parameter choices.")
+            seen.update(choices)
+            # Choice order is immaterial; parameter order still determines evaluation.
+            ordered = tuple(sorted(choices))
+            parameters.append((ordered[0], kind))
+            normalized.append(ordered[1:])
+        object.__setattr__(self, "parameters", tuple(parameters))
+        object.__setattr__(self, "aliases", tuple(normalized))
 
     @property
     def value(self) -> str:
         keyword = "関数" if self.effect is Effect.PURE else "手続き"
-        parameters = ", ".join(f"{kind.value} {particle}" for particle, kind in self.parameters)
+        parameters = ", ".join(f"{kind.value} {'|'.join((particle, *aliases))}"
+                               for (particle, kind), aliases in zip(self.parameters, self.aliases))
         return f"{keyword}[{parameters} -> {self.result_type.value}]"
 
 
@@ -65,6 +86,11 @@ class Parameter:
     name: str
     particle: str
     value_type: Type
+    aliases: tuple[str, ...] = field(default=(), kw_only=True)
+
+    @property
+    def choices(self) -> tuple[str, ...]:
+        return (self.particle, *self.aliases)
 
 
 @dataclass(frozen=True)
@@ -80,7 +106,7 @@ class Signature:
         object.__setattr__(self, "name", unicodedata.normalize("NFC", self.name))
         if not self.name.isidentifier() or self.name in PARTICLES | RESERVED | KEYWORDS | {"真", "偽"}:
             raise ValueError(f"Invalid function name: {self.name}")
-        particles = [p.particle for p in self.parameters]
+        particles = [label for p in self.parameters for label in p.choices]
         if len(set(particles)) != len(particles):
             raise ValueError(f"{self.name}: duplicate particle in signature")
         if any(p not in PARTICLES for p in particles):
@@ -94,7 +120,8 @@ class Signature:
 
     @property
     def value_type(self) -> FunctionType:
-        return FunctionType(tuple((p.particle, p.value_type) for p in self.parameters), self.result_type, self.effect)
+        return FunctionType(tuple((p.particle, p.value_type) for p in self.parameters), self.result_type, self.effect,
+                            aliases=tuple(p.aliases for p in self.parameters))
 
 
 @dataclass(frozen=True)
@@ -117,7 +144,7 @@ def substitute(kind: Type, substitutions: Mapping[TypeVariable, Type]) -> Type:
         return replace(kind, arguments=tuple(substitute(t, substitutions) for t in kind.arguments))
     if isinstance(kind, FunctionType):
         return FunctionType(tuple((p, substitute(t, substitutions)) for p, t in kind.parameters),
-                            substitute(kind.result_type, substitutions), kind.effect)
+                            substitute(kind.result_type, substitutions), kind.effect, aliases=kind.aliases)
     return kind
 
 
@@ -145,11 +172,13 @@ class TypeEnvironment:
     def resolve(self, node: TypeExpression, variables: Mapping[str, TypeVariable] | None = None) -> Type:
         variables = {} if variables is None else variables
         if node.name is None:
-            particles = [particle for particle, _ in node.parameters]
+            aliases = node.particle_aliases or ((),) * len(node.parameters)
+            particles = [p for (particle, _), alternatives in zip(node.parameters, aliases)
+                         for p in (particle, *alternatives)]
             if len(set(particles)) != len(particles):
-                raise Diagnostic("E_PARAMETER", "A function type cannot repeat a particle.", node.span)
+                raise Diagnostic("E_PARAMETER", "A function type cannot repeat a particle across its parameter choices.", node.span)
             return FunctionType(tuple((p, self.resolve(t, variables)) for p, t in node.parameters),
-                                self.resolve(node.result, variables), Effect.IO if node.effectful else Effect.PURE)
+                                self.resolve(node.result, variables), Effect.IO if node.effectful else Effect.PURE, aliases=aliases)
         name = node.name.name
         if name in variables:
             kind = variables[name]

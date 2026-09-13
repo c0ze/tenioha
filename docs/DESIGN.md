@@ -1,7 +1,7 @@
 # Tenioha — proposed Japanese core
 
 Design following the [2026-09-13 investigation](RESEARCH.md). **M0, M1, M2, and
-the 0.4 closure, 0.5 nested-pattern, and 0.6 compact-boundary extensions are
+the 0.4 closure, 0.5 nested-pattern, 0.6 compact-boundary, and 0.7 explicit-alias extensions are
 implemented in Python**; [LANGUAGE.md](LANGUAGE.md) documents the runnable
 dialect. The later surface-syntax extensions below remain proposals. See
 [HANDOFF.md](../HANDOFF.md) for current progress and the next agent's starting point.
@@ -20,7 +20,7 @@ may supply `から` in another call.
 Start with these separate internal concepts:
 
 ```text
-Parameter = (local name, particle, value type)
+Parameter = (local name, primary particle, alternate particles, value type)
 Signature = (function identity, parameters, result type, effect)
 Argument  = (expression, particle, source span)
 Call      = (function identity, arguments, source span)
@@ -86,9 +86,9 @@ For the first implementation:
 7. Emit a resolved call with arguments in the signature's canonical order.
 
 There is no missing-particle fallback, inferred `が`, implicit conversion, or
-global `に`/`へ` alias. A later function-specific alias would map to one
-parameter identity; supplying both aliases must count as supplying that
-parameter twice.
+global `に`/`へ` alias. Since 0.7, explicit choices such as `に|へ` map to one
+parameter identity; supplying both counts as supplying that parameter twice.
+Choice sets must be disjoint across a signature, even with different value types.
 
 ### Repeated particles are a real limitation
 
@@ -147,14 +147,14 @@ topic, case, and connective functions.
 
 These restrictions allow an initial implementation without an external
 morphology engine. Supporting `書く` / `書いて` / `書きます` automatically
-is a separate feature. Start with exact names, then consider declared inflected
-aliases; do not infer arbitrary stems by deleting a suffix.
+is a separate feature. Version 0.7 adds explicitly declared alternate names;
+it does not infer arbitrary stems by deleting a suffix.
 
 ## 5. Effects and politeness
 
 Dictionary forms can name either pure functions or I/O procedures. The
 declaration and checked body determine the effect. `表示する` remains effectful
-even though it is not polite; a polite alias would have the same type and
+even though it is not polite; a declared polite alias has the same type and
 effect as its canonical function.
 
 Do not use honorific or humble speech to grant permissions. If capabilities
@@ -295,10 +295,28 @@ as `5から引く` or `5から3を`. It retains original spans while normalizing
 particle spelling to NFC. All existing semantic checks and spaced notation
 remain in force. Unrestricted unspaced Japanese is still a separate proposal.
 
+### 0.7 — explicit names and particle choices (implemented)
+
+`別名 新名 は 対象` adds an explicit spelling for a named function, procedure,
+or constructor, including a builtin or qualified import. Resolve forward aliases
+and chains before checking bodies; reject unknown targets, cycles, and collisions.
+Retain the target's runtime key, generic parameters, and complete signature.
+Aliases are exported under their new name and may explicitly re-export imported
+functions. They do not add a body, constructor coverage case, or type alias.
+
+Parameters may declare disjoint choice sets, such as `(元:整数)に|へ`. Resolve
+either label to the same slot and reject supplying both. The same rules apply
+to closures, constructors, and patterns. Function types preserve choice sets;
+normalize choice order within each slot while preserving parameter slot order.
+Types must match exactly, without implicit narrowing, widening, or effect changes.
+
+`別名` is a new keyword; programs that used it as an identifier must rename it.
+Explicit declarations provide alternate spellings without a morphology engine,
+global particle equivalence, or implicit politeness/effect rules.
+
 ### Later extensions
 
-Explore argument aliases, broader controlled Japanese syntax,
-`の` projections, `て` chains, and explicit inflected spellings.
+Explore broader controlled Japanese syntax, `の` projections, and `て` chains.
 
 Porting, a JS backend, editor support, caching, macros, and game embedding come
 after core semantics. A future untrusted-program runner still needs appropriate
@@ -321,6 +339,10 @@ independent finite-domain oracle checks 729 three-arm pattern combinations.
 The 0.6 `tests/test_compact.py` checks lexical boundaries, all particle labels,
 argument permutations, Unicode spans, numeric limits, and compact forms across
 types, patterns, closures, and modules. CLI cases verify output and diagnostics.
+The 0.7 `tests/test_aliases.py` checks choice sets and argument permutations,
+duplicate roles, type equality/substitution, effects, canonical failure order,
+aliases and forward chains, constructor identity/coverage, imported re-exports,
+and validation before I/O. CLI cases cover the example, check counts, and spans.
 
 | Case | Expected result |
 |---|---|
