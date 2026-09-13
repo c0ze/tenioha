@@ -293,7 +293,7 @@ class ClosureTests(unittest.TestCase):
         self.error(source, 'E_DEPTH')
 
     def test_malformed_closures_have_source_diagnostics(self):
-        for source in ['関数 (値 整数) を -> 整数 { 値 }', '関数 (値: 整数)を -> 整数 { 値 }',
+        for source in ['関数 (値 整数) を -> 整数 { 値 }', '関数 (値: 整数) -> 整数 { 値 }',
                        '関数 -> 整数 {', '関数 (値: 整数) を { 値 }', '関数<T> -> T {}']:
             with self.subTest(source=source):
                 with self.assertRaises(Diagnostic):

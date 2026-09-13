@@ -1,8 +1,9 @@
-# Tenioha 0.5 — the runnable language
+# Tenioha 0.6 — the runnable language
 
-This describes M0/M1/M2, the 0.4 closure extension, and 0.5 nested patterns.
+This describes M0/M1/M2, the 0.4 closure extension, 0.5 nested patterns, and
+0.6 compact particle boundaries.
 The larger [design](DESIGN.md) also contains future features. Literal patterns,
-guards, and compact Japanese syntax are not implemented yet. See [the handoff](../HANDOFF.md)
+guards, and unrestricted unspaced Japanese are not implemented yet. See [the handoff](../HANDOFF.md)
 for milestone progress and [decisions](DECISIONS.md) for the syntax rationale.
 
 ## Running programs
@@ -18,6 +19,7 @@ python -m tenioha examples/options.ten
 python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
+python -m tenioha examples/compact.ten
 python -m tenioha --eval '(3 を 5 から 引く)'
 python -m tenioha --eval '(真 を 否定する)'
 python -m tenioha --check examples/arithmetic.ten
@@ -65,9 +67,10 @@ and types are preserved.
   no kana/kanji transliteration or compatibility normalization. An entire
   word is read before checking whether it is a particle: `たから` and
   `文字列にする` each remain one name. No dictionary is used.
-- Whitespace, including U+3000 fullwidth space, separates words. An argument
-  must be separated from its particle: write `5 から`, `「猫」 を`, and
-  `(式) に`. Compact forms such as `5から` and `「猫」を` are errors.
+- Whitespace, including U+3000 fullwidth space, separates words. Integers may
+  attach one complete particle word, as in `5から`. Closing delimiters also
+  separate words, allowing `「猫」を` and `(式)に`. Identifier words, including
+  boolean and bare type names, still need separation from their particles.
 - Parentheses, braces, colons, the return arrow `->`, generic delimiters `< >`,
   function type brackets `[ ]`, commas, and qualification dots are ASCII.
   Other fullwidth punctuation/numeral equivalents are
@@ -83,6 +86,45 @@ and types are preserved.
   Exceeding either limit produces a language diagnostic.
 - Match coverage checking permits at most 50,000 analyzed states per match.
   Exceeding it produces `E_MATCH_COMPLEXITY`; split the match into smaller matches.
+
+## Compact particle boundaries
+
+Spaced and compact notation can be mixed in one program. This prints `2` and
+`前後`:
+
+```text
+(((5から 3を 引く)を 文字列にする)を 表示する)。
+((「前」と「後」を 連結する)を 表示する)。
+```
+
+An ASCII integer may attach exactly one complete particle word, including after
+a minus sign or leading zeros: `-0005から` is the integer `-5` followed by
+`から`. Particle comparison uses NFC, with original numeric and particle spans
+retained for diagnostics. The 4096-digit integer limit is unchanged. Numeric
+prefixes, floats, fullwidth numbers, and numeric words such as `5から3を` or
+`5から引く` remain errors. Reserved syntax words such as `は` and `なら`
+cannot attach to integers and retain their existing grammatical roles.
+
+Closing `」`, `)`, `}`, `>`, and `]` delimit a value or type, so a following
+particle need not have whitespace. This applies consistently to argument
+expressions, constructor patterns, parameter declarations, and function types:
+`(値:整数)を`, `((値 を 有り)を 有り)`, `一覧<整数>を`, and
+`関数[整数 を->整数]で` all have clear boundaries. Imports may similarly use
+`取込「module.ten」と 別名`.
+
+Every identifier word is still read in full. `値を`, `たから`, `真を`, and
+`整数を` are single names; write `値 を`, `真 を`, and `整数 を` when a
+particle is intended. A particle and a following identifier or number also
+need separation: `「猫」を表示する` and `5から3を引く` are not split into a
+call. A delimiter can provide that separation, as in `「前」と「後」を`.
+Use whitespace or delimiters, without guessing boundaries from known names.
+
+This extension changes only reading: exact particles, argument evaluation
+order, types, effects, and matching rules are the same. For example,
+`((読む)を 表示する)` is still rejected for nested I/O. Strings and comments
+are unchanged, and automatic verb conjugation or particle aliases are not added.
+See [compact.ten](../examples/compact.ten) for modules, closures, and nested
+patterns using the shorter notation.
 
 ## Expressions and calls
 

@@ -1,7 +1,8 @@
 # Tenioha — proposed Japanese core
 
 Design following the [2026-09-13 investigation](RESEARCH.md). **M0, M1, M2, and
-the 0.4 closure and 0.5 nested-pattern extensions are implemented in Python**; [LANGUAGE.md](LANGUAGE.md) documents the runnable
+the 0.4 closure, 0.5 nested-pattern, and 0.6 compact-boundary extensions are
+implemented in Python**; [LANGUAGE.md](LANGUAGE.md) documents the runnable
 dialect. The later surface-syntax extensions below remain proposals. See
 [HANDOFF.md](../HANDOFF.md) for current progress and the next agent's starting point.
 
@@ -139,9 +140,10 @@ topic, case, and connective functions.
   NFKC to the entire program or modifying string contents.
 - Permit kana identifiers and invented names. A dictionary should not decide
   whether a programmer is allowed to name a value.
-- A compact reader could later accept unambiguous boundaries such as `5から`,
-  `「文字列」を`, or `(式)を`. No-space bare identifiers need a separate rule;
-  adding a particle regex does not solve this.
+- The 0.6 compact reader accepts unambiguous boundaries such as `5から`,
+  `「文字列」を`, or `(式)を`. Bare identifier words remain whole: `値を`
+  is one name, and `5から3を引く` is not accepted. See the implementation
+  decision below for the exact scope.
 
 These restrictions allow an initial implementation without an external
 morphology engine. Supporting `書く` / `書いて` / `書きます` automatically
@@ -280,9 +282,22 @@ leave no bindings behind. The selected arm's nested bindings can be captured by
 closures. Literal patterns, guards, primitive matching, and proofs that recursive
 types have no finite values remain outside this extension.
 
+### 0.6 — compact particle boundaries (implemented)
+
+An ASCII integer may have one complete particle word attached, including after
+a minus sign or leading zeros. Closing string quotes, parentheses, braces,
+generic delimiters, and function-type brackets already supply word boundaries;
+allow particles to touch them in values, patterns, parameters, and types.
+
+Read identifier words in full, preserving names such as `たから` and `値を`.
+The reader does not split particle prefixes from longer numeric suffixes such
+as `5から引く` or `5から3を`. It retains original spans while normalizing
+particle spelling to NFC. All existing semantic checks and spaced notation
+remain in force. Unrestricted unspaced Japanese is still a separate proposal.
+
 ### Later extensions
 
-Explore argument aliases, constrained compact Japanese,
+Explore argument aliases, broader controlled Japanese syntax,
 `の` projections, `て` chains, and explicit inflected spellings.
 
 Porting, a JS backend, editor support, caching, macros, and game embedding come
@@ -303,6 +318,9 @@ shadowing, delayed execution, and closure type/effect tests.
 The 0.5 `tests/test_patterns.py` covers nested patterns, ordered overlaps,
 missing combinations, unreachable arms, aliases, and captured bindings. An
 independent finite-domain oracle checks 729 three-arm pattern combinations.
+The 0.6 `tests/test_compact.py` checks lexical boundaries, all particle labels,
+argument permutations, Unicode spans, numeric limits, and compact forms across
+types, patterns, closures, and modules. CLI cases verify output and diagnostics.
 
 | Case | Expected result |
 |---|---|

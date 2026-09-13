@@ -12,7 +12,9 @@ Do not infer that a planned item is implemented.
 The user asked to resume the interrupted M1 checkpoint, then to continue.
 M1 and M2 are complete. Subsequent continuations added anonymous functions and
 lexical closures (0.4.0), then nested constructor patterns and ordered match
-arms as version **0.5.0**. Final verification is recorded below.
+arms (0.5.0). The user then requested a public repository under `c0ze` and
+continued development. The repository is published; compact particle boundaries
+are implemented as version **0.6.0**. Final verification is recorded below.
 
 ## Milestones
 
@@ -24,7 +26,8 @@ arms as version **0.5.0**. Final verification is recorded below.
 | M2 | Complete (0.3.0) | Algebraic data types, explicit generics, exhaustive constructor matching, function values, modules, list/option library |
 | Closures | Complete (0.4.0) | Anonymous functions/procedures with immutable lexical captures |
 | Nested patterns | Complete (0.5.0) | Recursive constructor patterns, ordered arms, exhaustiveness and unreachable-case checking |
-| Later | Not started | Compact Japanese syntax, richer patterns/inference, tooling/backends, embedding |
+| Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
+| Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
 
@@ -34,6 +37,11 @@ arms as version **0.5.0**. Final verification is recorded below.
   references/application, and qualified import names. Anonymous `関数`/`手続き`
   expressions use the same signature syntax with the name omitted. Patterns
   recursively contain constructors, binding names, or wildcards.
+- ASCII integers may attach one complete particle word, including signed and
+  leading-zero forms. Closing delimiters can touch following particles in
+  values, patterns, parameters, and types. The reader preserves original spans
+  and never splits identifier words or guesses particle prefixes in longer
+  numeric words. Both spaced and compact forms use the same checker/evaluator.
 - `typesys.py` defines primitive/nominal/function types, rigid generic variables,
   signature substitution, and type resolution. Generic arguments are explicit;
   body checking is parametric and runtime bodies are shared.
@@ -76,9 +84,11 @@ arms as version **0.5.0**. Final verification is recorded below.
 
 ## Verification
 
-Latest verification: **234 tests passed** on Python 3.14.7 on 2026-09-13,
-including the 193-test closure baseline, 38 nested-pattern tests, and 3 new CLI
-tests. `git diff --check` also passed.
+Latest verification: **262 tests passed** on Python 3.14.7 on 2026-09-13,
+including the 234-test nested-pattern baseline, 25 compact-reader tests, and 3
+new CLI tests. Earlier missing-space rejection cases now cover ambiguous words
+or missing particles; compact forms have positive coverage. `git diff --check`
+also passed.
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
 in `test_types.py`, `test_function_values.py`, `test_modules.py`, and the CLI
@@ -103,8 +113,11 @@ single subject evaluation, and checking before I/O. An independent finite-value
 oracle verifies all 729 three-arm sequences for a pair of two-colour values.
 Deep/wide patterns, recursive data, and the coverage budget exercise resource
 limits. CLI tests verify examples and source diagnostics before output.
+The compact-reader suite adds all eight labels, signed/large integers, NFC
+particle spans, identifier boundaries, delimiter adjacency across the grammar,
+and unchanged types/effects, evaluation order, modules, and captures.
 
-All eleven example files ran with their expected `.out` fixtures and passed
+All twelve example files ran with their expected `.out` fixtures and passed
 `--check`, including both greeting input fixtures. Selected examples:
 
 | Example | Output |
@@ -114,9 +127,10 @@ All eleven example files ran with their expected `.out` fixtures and passed
 | `closures.ten` | `6`, `15`, `36` after independent increment factories and list map/fold |
 | `closure_greeting.ten` | `こんにちは、Ada` twice after one input read |
 | `nested_patterns.ten` | `未設定`, `空`, `一つ`, `複数`, `7` after optional-list matching and a closure capturing the first element |
+| `compact.ten` | `てにをは、少し短く。`, `2`, `2`, `36`, `11` using compact particles, closures, list operations, and nested patterns |
 
-Eighteen README/language-guide snippets were verified, including the deliberate
-nested-I/O error example. All 32 local documentation links resolve. Python 3.11+ is the
+Twenty README/language-guide snippets were verified, including the deliberate
+nested-I/O error example. All 33 local documentation links resolve. Python 3.11+ is the
 intended baseline; runtime verification used Python 3.14.7 only.
 
 ## Known limits
@@ -141,7 +155,9 @@ intended baseline; runtime verification used Python 3.14.7 only.
 - Imported files have no top-level values/initializers, private declarations,
   implicit re-exports, or package search path. `--eval` cannot import; embedding
   can supply a concrete source filename for relative import resolution.
-- No compact Japanese syntax, automatic conjugation, or inflected aliases yet.
+- No unrestricted unspaced Japanese, automatic conjugation, or inflected aliases.
+  `5から` and `「猫」を` work, but `値を` remains one name. Keep boundaries
+  between words; `5から3を引く` is rejected rather than segmented.
 - Algebraic/function displays omit type arguments and module aliases; they are
   human-readable values, not a source serialization format. Anonymous closures
   display `関数 {…}` or `手続き {…}` without exposing captured values.
@@ -150,13 +166,13 @@ intended baseline; runtime verification used Python 3.14.7 only.
 
 - [Current language guide](docs/LANGUAGE.md)
 - [Design and roadmap](docs/DESIGN.md)
-- [Recorded decisions](docs/DECISIONS.md), including M2 grammar, closures, and nested patterns
+- [Recorded decisions](docs/DECISIONS.md), including M2 grammar, closures, nested patterns, and compact boundaries
 - [Research and pinned sources](docs/RESEARCH.md)
 - Kip checkout: `/home/arda/projects/kip`, inspected revision
   `eed6b0ed5ea397f226ed0f7d52ff8d56410ae4d2`. It was not changed or executed.
-- The user authorized creating a public `c0ze/tenioha` GitHub repository and
-  pushing the implementation, then continuing development. Publication of the
-  verified 0.5.0 checkpoint is the current step.
+- Public repository: [c0ze/tenioha](https://github.com/c0ze/tenioha), default
+  branch `master`. The verified 0.5.0 checkpoint was committed as `701c643` and
+  pushed. The user authorized publication and continued development.
 - No repository `AGENTS.md` was found. No third-party packages are required.
 
 ## Resume commands
@@ -172,16 +188,17 @@ python -m tenioha examples/options.ten
 python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
+python -m tenioha examples/compact.ten
 python -m tenioha --check examples/lists.ten
 ```
 
 ## Next work (not started)
 
-The M0–M2 roadmap, closures, and nested-pattern extension are complete. Before
-extending the surface language, select one later feature and record its exact
-semantics and acceptance examples.
+The M0–M2 roadmap, closures, nested patterns, and constrained compact reader are
+complete. Before extending the surface language, select one later feature and
+record its exact semantics and acceptance examples.
 Candidates from the roadmap include declared particle/inflection aliases,
-constrained compact Japanese, `の` projections, and `て` sequencing. Richer
+`の` projections, and `て` sequencing. Richer
 patterns (literals or guards), tooling/backends, and game embedding are separate work.
 
 Preserve whole-program checking before I/O, canonical argument evaluation order,

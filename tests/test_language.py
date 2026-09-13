@@ -185,9 +185,9 @@ class LanguageTests(unittest.TestCase):
                 self.error(source, "E_TOKEN")
 
     def test_missing_word_boundaries(self):
-        self.error("(5から 3 を 引く)", "E_TOKEN")
-        self.error("(「猫」を 表示する)", "E_SPACE")
-        self.error("((5 から 3 を 引く)に 4 を 足す)", "E_SPACE")
+        self.error("(5から3を 引く)", "E_TOKEN")
+        self.error("(「猫」を表示する)", "E_PARTICLE")
+        self.error("((5 から 3 を 引く)に4 を 足す)", "E_PARTICLE")
 
     def test_unbalanced_or_malformed_calls(self):
         for source, code in [("(5 から 3 を 引く", "E_PAREN"), ("(5 から", "E_PAREN"),

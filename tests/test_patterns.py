@@ -197,7 +197,7 @@ class PatternTests(unittest.TestCase):
         for fields in ['', '値 に', '値 を 別 を']:
             source = OPTION + f'場合 ((7 を 有り<整数>) を 有り<選択<整数>>) {{ (({fields} 有り) を 有り) なら {{ 0 }} _ なら {{ 1 }} }}'
             self.error(source, 'E_ARGUMENTS')
-        self.error(OPTION + '場合 ((7 を 有り<整数>) を 有り<選択<整数>>) { ((値 を 有り)を 有り) なら { 0 } _ なら { 1 } }', 'E_SPACE')
+        self.assertEqual(run(OPTION + '場合 ((7 を 有り<整数>) を 有り<選択<整数>>) { ((値 を 有り)を 有り) なら { 値 } _ なら { 0 } }'), [7])
 
     def test_nested_patterns_remain_nominal(self):
         self.error(OPTION + '型 別 { 外 } 場合 ((無し<整数>) を 有り<選択<整数>>) { ((外) を 有り) なら { 0 } _ なら { 1 } }', 'E_PATTERN')

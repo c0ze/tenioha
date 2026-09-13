@@ -122,8 +122,9 @@ M2 selects these additions to the structured core:
 The executable grammar and examples are in [LANGUAGE.md](LANGUAGE.md).
 At the M2 boundary, anonymous functions and closures were deferred; the 0.4
 decision below implements them. The 0.5 decision further extends constructor
-patterns. Literal patterns, generic inference, module constants, and compact
-Japanese notation remain future work.
+patterns, and 0.6 adds constrained compact particle boundaries. Literal patterns,
+generic inference, module constants, and unrestricted unspaced Japanese remain
+future work.
 
 ## 2026-09-13: 0.4 anonymous functions and lexical closures
 
@@ -190,3 +191,35 @@ values. Coverage remains conservative over declared constructor structure.
 Literal patterns, guards, alternatives within patterns, and primitive subjects
 are future work. The acceptance program classifies absent/empty/single/multiple
 lists inside an option and returns a closure holding a nested list element.
+
+## 2026-09-13: 0.6 compact particle boundaries
+
+Accept compact forms only where the reader can identify a boundary without a
+dictionary, name lookup, or guessing a particle prefix. This is the constrained
+reader proposed in the original design:
+
+- An ASCII integer, including a minus sign or leading zeros, may be immediately
+  followed by exactly one complete particle word: `5から`, `-3を`, or `7が`
+  (the last particle normalizes to `が`). Preserve separate original spans for
+  the number and particle. The existing 4096-digit limit still applies.
+- A closing string quote, parenthesis, brace, generic delimiter, or function-type
+  bracket already separates words. Allow its following particle to touch it in
+  calls, constructor patterns, parameter declarations, and function types.
+  Examples include `「猫」を`, `(式)に`, `(値:整数)を`, and `一覧<整数>を`.
+- Continue reading every identifier word in full before classifying it. `値を`,
+  `たから`, and `真を` are single names. Bare names, boolean literals, and bare
+  type names therefore still need separation from their particles. A particle
+  and a following name or number also need separation: `5から引く`, `5から3を`,
+  and `「猫」を表示する` are not split into calls. Delimiters can supply that
+  separation, as in `「前」と「後」を 連結する`.
+
+Apply this as a reader extension, with no alternate mode or source rewriting.
+Spaced programs retain their behavior. Particle roles, canonical argument order,
+static types/effects, module identity, pattern coverage, and lexical captures
+are unchanged. Strings and comments retain their exact contents. Continue to
+reject unsupported numeric forms, fullwidth syntax, and reserved words used as
+particles. Automatic conjugation, particle aliases, and unrestricted unspaced
+Japanese remain separate proposals.
+
+The acceptance program compares compact argument permutations, matches nested
+constructors, and uses a capturing closure with a generic library operation.

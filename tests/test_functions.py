@@ -236,7 +236,7 @@ class FunctionTests(unittest.TestCase):
             ("もし 真 なら { 1 }", "E_SYNTAX"),
             ("もし 真 { 1 } そうでなければ { 2 }", "E_SYNTAX"),
             ("関数 名 (数 整数) を -> 整数 { 数 }", "E_SYNTAX"),
-            ("関数 名 (数: 整数)を -> 整数 { 数 }", "E_SPACE"),
+            ("関数 名 (数: 整数) -> 整数 { 数 }", "E_SYNTAX"),
             ("関数 名 (数: 整数) は -> 整数 { 数 }", "E_SYNTAX"),
             ("関数 名 -> 整数 1", "E_SYNTAX"), ("値 は", "E_SYNTAX"),
         ]:

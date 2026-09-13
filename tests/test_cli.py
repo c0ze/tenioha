@@ -72,7 +72,7 @@ class CLITests(unittest.TestCase):
         for args in [(), ("examples/arithmetic.ten", "--eval", "1")]:
             with self.subTest(args=args):
                 self.assertEqual(self.cli(*args).returncode, 2)
-        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.5.0\n")
+        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.6.0\n")
 
     def test_algebraic_values_function_values_and_check_counts(self):
         result = self.cli("--eval", "型 箱<T> { 包む (値: T) を } (7 を 包む<整数>) 参照 引く")
@@ -114,6 +114,31 @@ class CLITests(unittest.TestCase):
                          (0, path.with_suffix(".out").read_text(), ""))
         check = self.cli("--check", str(path))
         self.assertEqual(check.returncode, 0, check.stderr)
+
+    def test_compact_example_and_pure_eval(self):
+        path = ROOT / "examples" / "compact.ten"
+        result = self.cli(str(path))
+        self.assertEqual((result.returncode, result.stdout, result.stderr),
+                         (0, path.with_suffix(".out").read_text(), ""))
+        check = self.cli("--check", str(path))
+        self.assertEqual(check.returncode, 0, check.stderr)
+        result = self.cli("--pure", "--eval", "(5から 3を 引く)")
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "2\n", ""))
+
+    def test_compact_error_has_original_span_before_output(self):
+        result = self.cli("--eval", '(「early」を 表示する)。\n(3に 5に 足す)')
+        self.assertEqual((result.returncode, result.stdout), (1, ""))
+        self.assertIn("<eval>:2:6: E_ARGUMENTS", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        result = self.cli("--eval", '(「early」を 表示する)(5から3を引く)')
+        self.assertEqual((result.returncode, result.stdout), (1, ""))
+        self.assertIn("E_TOKEN", result.stderr)
+
+    def test_compact_large_integer_is_independent_of_python_conversion_limit(self):
+        digits = "8" * 1000
+        result = self.cli("--eval", f"({digits}を 文字列にする)",
+                          env={**os.environ, "PYTHONINTMAXSTRDIGITS": "640"})
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, digits + "\n", ""))
 
     def test_missing_nested_case_is_reported_before_output(self):
         source = '''(「early」 を 表示する)

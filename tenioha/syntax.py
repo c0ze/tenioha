@@ -1,4 +1,4 @@
-"""The source reader: explicit boundaries, Japanese strings, predicate-last calls."""
+"""The source reader: unambiguous boundaries, Japanese strings, predicate-last calls."""
 
 from __future__ import annotations
 
@@ -137,16 +137,25 @@ def tokenize(source: Source) -> tuple[Token, ...]:
         word = text[start:pos]
         span = Span(source, start, pos)
         normalized = unicodedata.normalize("NFC", word)
-        if re.fullmatch(r"-?[0-9]+", word):
+        number = re.match(r"-?[0-9]+", word)
+        suffix = unicodedata.normalize("NFC", word[number.end():]) if number else ""
+        # Only split an integer followed by a complete particle word. Never
+        # split identifier words or guess a particle prefix in 5から引く.
+        if number and (not suffix or suffix in PARTICLES):
+            integer = number.group()
+            integer_end = start + number.end()
+            integer_span = Span(source, start, integer_end)
             # A documented reader limit, independent of Python's int conversion setting.
-            if len(word.lstrip("-")) > 4096:
-                raise Diagnostic("E_INTEGER", "Integer literals may contain at most 4096 digits.", span)
-            digits = word.lstrip("-")
+            if len(integer.lstrip("-")) > 4096:
+                raise Diagnostic("E_INTEGER", "Integer literals may contain at most 4096 digits.", integer_span)
+            digits = integer.lstrip("-")
             value = 0
             for offset in range(0, len(digits), 9):
                 chunk = digits[offset:offset + 9]
                 value = value * 10 ** len(chunk) + int(chunk)
-            tokens.append(Token("INTEGER", -value if word.startswith("-") else value, span))
+            tokens.append(Token("INTEGER", -value if integer.startswith("-") else value, integer_span))
+            if suffix:
+                tokens.append(Token("PARTICLE", suffix, Span(source, integer_end, pos)))
         elif normalized in {"真", "偽"}:
             tokens.append(Token("BOOLEAN", normalized == "真", span))
         elif normalized in PARTICLES:
@@ -159,7 +168,7 @@ def tokenize(source: Source) -> tuple[Token, ...]:
             tokens.append(Token("NAME", normalized, span))
         else:
             raise Diagnostic("E_TOKEN",
-                             f"Invalid token {word!r}. Use ASCII numbers/parentheses and spaces between words and particles.",
+                             f"Invalid token {word!r}. Use ASCII numbers/parentheses and separate identifier words; an integer may attach one complete particle.",
                              span)
     tokens.append(Token("END", "", Span(source, len(text), len(text))))
     return tuple(tokens)
@@ -372,8 +381,6 @@ class Parser:
             while self.current.kind != "ARROW":
                 kind = self.type_expression(depth + 1)
                 particle = self.expect("PARTICLE", "a particle in the function type")
-                if kind.span.end == particle.span.start:
-                    raise Diagnostic("E_SPACE", "Separate a type and its particle with whitespace.", particle.span)
                 parameters.append((str(particle.value), kind))
                 if self.current.kind != "ARROW":
                     self.expect("COMMA", ", between function type parameters")
@@ -394,10 +401,8 @@ class Parser:
             parameter_name = self.name("a parameter name")
             self.expect("COLON", ": before the parameter type")
             type_name = self.type_expression()
-            close = self.expect("CLOSE", ") after the parameter type")
+            self.expect("CLOSE", ") after the parameter type")
             particle = self.expect("PARTICLE", "a parameter particle (は is not an argument label)")
-            if close.span.end == particle.span.start:
-                raise Diagnostic("E_SPACE", "Separate a parameter and its particle with whitespace.", particle.span)
             parameters.append(ParameterDeclaration(parameter_name, type_name, str(particle.value), particle.span))
         return tuple(parameters)
 
@@ -525,8 +530,6 @@ class Parser:
             else:
                 child = self.pattern(depth + 1)
             particle = self.expect("PARTICLE", "a particle after the field pattern")
-            if child.span.end == particle.span.start:
-                raise Diagnostic("E_SPACE", "Separate a field pattern and its particle with whitespace.", particle.span)
             arguments.append((child, str(particle.value), particle.span))
 
     def expression(self, depth: int = 0) -> Expression:
@@ -591,8 +594,6 @@ class Parser:
                 raise Diagnostic("E_PAREN", "Unclosed call; expected ).", token.span)
             if particle.kind != "PARTICLE":
                 raise Diagnostic("E_PARTICLE", "Expected an argument particle after this value; put the function name last.", particle.span)
-            if expression.span.end == particle.span.start:
-                raise Diagnostic("E_SPACE", "Separate an argument and its particle with whitespace.", particle.span)
             self.pos += 1
             arguments.append(Argument(expression, str(particle.value), particle.span))
 

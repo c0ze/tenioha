@@ -7,13 +7,14 @@ A programming language where **Japanese particles are checked parts of function 
 > whether a sentence's grammar holds together: *「てにをはが合わない」* is
 > what you say when someone's particles are wrong.
 
-Status: **0.5.0 is implemented:** a Python reference interpreter with
+Status: **0.6.0 is implemented:** a Python reference interpreter with
 typed particle calls, user-defined functions/procedures, immutable bindings,
 recursion, lazy conditionals, checked I/O, algebraic data types, explicit generics,
 exhaustive nested constructor matching, function values, and modules. Generic list and
 option libraries are included. Anonymous functions and procedures capture immutable
 lexical values. Matches support ordered arms and wildcard fallbacks, with missing
-and unreachable cases rejected before execution. Compact Japanese syntax is future work.
+and unreachable cases rejected before execution. Particles can touch integers
+and closing delimiters; identifier words keep explicit boundaries.
 
 - [Milestone progress and agent handoff](HANDOFF.md)
 - [Current language and builtins](docs/LANGUAGE.md)
@@ -28,7 +29,8 @@ and unreachable cases rejected before execution. Compact Japanese syntax is futu
 Python 3.11+; no packages or installation required. Tested with Python 3.14.7.
 
 ```sh
-cd ~/projects/tenioha
+git clone https://github.com/c0ze/tenioha.git
+cd tenioha
 python -m tenioha --eval '(5 から 3 を 引く)'
 python -m tenioha examples/hello.ten
 python -m tenioha examples/arithmetic.ten
@@ -39,6 +41,7 @@ python -m tenioha examples/options.ten
 python -m tenioha examples/closures.ten
 python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
+python -m tenioha examples/compact.ten
 python -m tenioha --check examples/factorial.ten
 ```
 
@@ -64,8 +67,15 @@ python -m unittest discover -s tests -v
 ```
 
 Save UTF-8 source as a `.ten` file. `;` starts a line comment and `。` is an
-optional statement terminator. Use spaces around particle words. Nested calls
-need parentheses; compact notation such as `5から` is not supported yet.
+optional statement terminator. Nested calls need parentheses. Particles can
+touch numbers and closing delimiters:
+
+```text
+(((5から 3を 引く)を 文字列にする)を 表示する)。
+```
+
+This also prints `2`. Keep spaces between identifier words: `値 を` uses a
+particle, while `値を` is one name. Fully joined `5から3を引く` is not supported.
 
 Functions declare particle parameters and their return type:
 
