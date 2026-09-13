@@ -21,6 +21,16 @@ implements **0.7.0 explicit aliases**, after reproducing the clean 262-test
 baseline. Alternate function spellings and per-parameter particle choices are
 complete. Final verification is recorded below; no 0.7 work remains outstanding.
 
+Current task: the user requested independent Claude, Kimi, and Grok audits and
+fixes for confirmed findings. Work is on `audit/multi-model-0.7`, based on
+`40c2e08`; the untouched 305-test baseline passed. All three read-only reviews
+completed through local tincan listeners. Original reports, a Claude follow-up,
+and finding dispositions are in [the audit record](docs/AUDIT-0.7.md).
+The **0.7.1** implementation fixes pass 318 tests on Python 3.11.15 and 3.14.7.
+Final review of the fixed branch and final example/doc verification are underway.
+Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/`
+(excluded from git). Do not repeat the original full-project review.
+
 ## Milestones
 
 | Milestone | Status | Scope |
@@ -33,6 +43,7 @@ complete. Final verification is recorded below; no 0.7 work remains outstanding.
 | Nested patterns | Complete (0.5.0) | Recursive constructor patterns, ordered arms, exhaustiveness and unreachable-case checking |
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
 | Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
+| Multi-model audit | Fixes complete; final review in progress (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, independent reviews and recorded dispositions |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation

@@ -1,4 +1,4 @@
-# Tenioha 0.7 — the runnable language
+# Tenioha 0.7.1 — the runnable language
 
 This describes M0/M1/M2, the 0.4 closure extension, 0.5 nested patterns, and
 0.6 compact particle boundaries, and 0.7 explicit aliases.
@@ -36,7 +36,8 @@ Algebraic values display their constructor and particle-labelled fields, with
 quoted strings inside them. Named function values display `参照` and their
 function name. Closures display `関数 {…}` or `手続き {…}` without their captures.
 These displays omit module aliases and type arguments and are not a
-source serialization format.
+source serialization format. Values constructed through an explicit alias may
+display that alias spelling; matching still uses the original constructor identity.
 
 `--check` checks without executing any statement and reports entry statement,
 named function definition, and (when present) algebraic type counts. Anonymous
@@ -79,6 +80,9 @@ and types are preserved.
   Other fullwidth punctuation/numeral equivalents are
   not rewritten. Japanese punctuation and fullwidth numerals remain valid
   inside strings.
+- Source line breaks are LF, CRLF (one break), CR, U+0085, U+2028, and U+2029.
+  Comments end and diagnostic line numbers advance at these same boundaries.
+  These characters inside strings retain their original contents.
 - `;` begins a comment through the end of the line, except inside a string.
 - Newlines are whitespace. `。` may terminate a statement at file or block
   scope; it is optional and is not a separator inside a call.
@@ -87,6 +91,10 @@ and types are preserved.
   the entry file.
   Runtime recursion has a separate limit of 1024 active user function calls.
   Exceeding either limit produces a language diagnostic.
+- Closure parameter/result annotations start their own type depth budget.
+  Type depth limits apply to written annotations. Generic substitution can
+  compose deeper types; their comparison, hashing, substitution, and diagnostic
+  formatting use explicit work stacks.
 - Match coverage checking permits at most 50,000 analyzed states per match.
   Exceeding it produces `E_MATCH_COMPLEXITY`; split the match into smaller matches.
 
@@ -229,7 +237,8 @@ either `に` or `へ`. The choices are local to this signature: the builtin
 `足す` still accepts only `に` for its first parameter. Supply exactly one
 choice per parameter. `(5に 6へ 3を 加える)` supplies the first parameter
 twice and is rejected with `E_ARGUMENTS`. Missing parameters and wrong value
-types remain errors, whichever label is used.
+types remain errors, whichever label is used. Missing-parameter diagnostics list
+each slot's full accepted choice set, identically for direct and indirect calls.
 
 Choices must be disjoint across a signature. `に|に` and separate parameters
 declaring `に|へ` and `へ` both produce `E_PARAMETER`. Only the eight existing
@@ -271,7 +280,8 @@ including unused imported declarations. Names share the function namespace,
 so they cannot replace a builtin, constructor, function, or another alias.
 Alias targets are named declarations, not type names or lexical function values.
 Alias a whole generic declaration, then supply type arguments at its calls or
-references: `別名 写します は 写す` followed by `参照 写します<整数>`.
+references. With `取込 「../lib/list.ten」 と 列`, for example,
+`別名 写します は 列.写す` allows `参照 写します<整数, 文字列>`.
 Specialization in the alias declaration itself is rejected.
 
 Aliases are exported under their new names. A module can explicitly re-export
@@ -649,6 +659,20 @@ assert execute(program) == [2]
 `run` and `execute` accept `stdin` and `stdout` text streams. `compile_source`
 performs no program I/O, although imports read source files. The test suite uses in-memory streams to verify that
 invalid programs do not read or print, and subprocesses to verify CLI behavior.
+Source strings passed to `compile_source`, `run`, or `--eval` may include one
+initial BOM. The reader skips it while keeping original source offsets; BOMs
+inside strings remain literal content. `filename` identifies the entry module
+as well as providing a base for imports; use the entry's path, not an imported
+library's path.
+
+`compile_source(..., functions=...)` accepts a custom host builtin mapping that
+replaces the default table. To extend it, pass `{**BUILTINS, ...}` using
+`BUILTINS` from `tenioha.core`. `run` uses the default table; custom embeddings
+can call `compile_source` and then `execute`. Returned algebraic and function
+values are runtime objects: Python dataclass equality/repr is not a language
+equality or display contract. Use `tenioha.core.format_value` to display deep
+values without recursive Python repr.
+
 Executing a compiled program starts with fresh top-level bindings and closure
 captures each time.
 The result list has one value per top-level statement (bindings return `None`);

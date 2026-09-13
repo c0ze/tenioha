@@ -7,7 +7,7 @@ A programming language where **Japanese particles are checked parts of function 
 > whether a sentence's grammar holds together: *「てにをはが合わない」* is
 > what you say when someone's particles are wrong.
 
-Status: **0.7.0 is implemented:** a Python reference interpreter with
+Status: **0.7.1 is implemented:** a Python reference interpreter with
 typed particle calls, user-defined functions/procedures, immutable bindings,
 recursion, lazy conditionals, checked I/O, algebraic data types, explicit generics,
 exhaustive nested constructor matching, function values, and modules. Generic list and
@@ -21,6 +21,7 @@ the same types, effects, and canonical argument order.
 - [Milestone progress and agent handoff](HANDOFF.md)
 - [Current language and builtins](docs/LANGUAGE.md)
 - [Recorded language decisions](docs/DECISIONS.md)
+- [Claude, Kimi, and Grok audit and fixes](docs/AUDIT-0.7.md)
 - [Investigation of Kip and Japanese prior art](docs/RESEARCH.md)
 - [Proposed Japanese core and implementation milestones](docs/DESIGN.md)
 
@@ -28,7 +29,8 @@ the same types, effects, and canonical argument order.
 
 ## Run it
 
-Python 3.11+; no packages or installation required. Tested with Python 3.14.7.
+Python 3.11+; no packages or installation required. Tested with Python 3.11.15
+and 3.14.7.
 
 ```sh
 git clone https://github.com/c0ze/tenioha.git

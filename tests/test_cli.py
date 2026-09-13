@@ -72,7 +72,7 @@ class CLITests(unittest.TestCase):
         for args in [(), ("examples/arithmetic.ten", "--eval", "1")]:
             with self.subTest(args=args):
                 self.assertEqual(self.cli(*args).returncode, 2)
-        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.7.0\n")
+        self.assertEqual(self.cli("--version").stdout, "Tenioha 0.7.1\n")
 
     def test_algebraic_values_function_values_and_check_counts(self):
         result = self.cli("--eval", "型 箱<T> { 包む (値: T) を } (7 を 包む<整数>) 参照 引く")

@@ -274,3 +274,19 @@ particle choices under permutations, duplicate aliases, generic factories and
 closures, same-constructor matching, explicit module re-exports, unchanged IO
 checks, and canonical argument failure order. `examples/aliases.ten` prints
 `8`, `8`, `7`, and `11` using these features together.
+
+## 2026-09-13: 0.7.1 audit corrections
+
+The Claude, Kimi, and Grok audit, including local reproduction and follow-up,
+is recorded in [AUDIT-0.7.md](AUDIT-0.7.md). Composing generic annotations can
+produce types deeper than the source nesting limit. Comparing or formatting
+those types within nested expression checks exhausted Python 3.11's stack.
+Use iterative type equality, hashing, formatting, and substitution while
+preserving nominal identity, generic owners, effects, and particle choice sets.
+
+Treat LF, CRLF, CR, U+0085, U+2028, and U+2029 consistently as source line breaks
+for comments and diagnostics. This corrects the earlier LF-only comment and
+source-location handling; CRLF counts once. Accept one initial BOM on string
+input paths as well as file input, retaining source offsets. Strings preserve
+their exact contents. Alias diagnostics now explain file-scope restrictions
+and list every accepted choice for a missing parameter.
