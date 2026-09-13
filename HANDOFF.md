@@ -29,7 +29,7 @@ The **0.7.1 audit is complete**, prepared on `audit/multi-model-0.7` from
 handling and literal newline translation; both are corrected with entry/import
 regressions. Claude, Kimi, and Grok each returned **PASS** in the resumed bounded
 closeout review of that implementation. No blocking findings or unfinished 0.7.1
-implementation work remain; no new feature work is in progress.
+implementation work remain. The separate examples/playground task follows below.
 Original reports, follow-ups, and finding dispositions are in
 [the audit record](docs/AUDIT-0.7.md). Review transport files remain in
 `/tmp/tenioha-audit-YEdpGq`, `/tmp/tenioha-closeout-hc1fqpb8`, and local `.tincan/`
@@ -39,10 +39,18 @@ Current task: add Fibonacci, FizzBuzz, primes, and related teaching examples,
 plus a GitHub Pages introduction and working browser playground. Implementation
 is on `feature/examples-playground`, based on `8d83495`. Five new standalone
 examples bring the catalog to 18. The site runs the unchanged 0.7.1 interpreter
-through pinned Pyodide 0.29.3 in a disposable worker. Native tests pass 334 cases
-on Python 3.11.15 and 3.14.7; eight real Chromium tests cover the full catalog,
+through pinned Pyodide 0.29.3 in a disposable worker. Native tests pass 335 cases
+on Python 3.11.15 and 3.14.7; nine real Chromium tests cover the full catalog,
 errors, I/O, cancellation, limits, responsive layout, and load-failure recovery.
-Claude/Kimi/Grok review and Pages publication are the remaining steps. See
+Claude, Kimi, and Grok each passed the initial `8d83495..7535edf` review. Commit
+`5b2726d` addresses keyboard focus, mobile and Japanese labels, and the build
+destination guard, with added regressions. All three also passed the focused
+follow-up review of that commit. No reviews or implementation fixes remain.
+Request/reply files are in `/tmp/tenioha-playground-review`; do not repeat them.
+Original reports and finding dispositions are in
+[the feature review record](docs/reviews/2026-09-14-playground/README.md).
+Pages has been enabled with GitHub Actions as its publishing source; the feature
+has not yet been merged or deployed. Publication is the remaining step. See
 [PLAYGROUND.md](docs/PLAYGROUND.md) for building, serving, tests, and deployment.
 
 ## Milestones
@@ -58,7 +66,7 @@ Claude/Kimi/Grok review and Pages publication are the remaining steps. See
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
 | Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
 | Multi-model audit | Complete (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, Claude/Kimi/Grok closeout passes and recorded dispositions |
-| Examples and playground | Implemented; review and publication in progress | Five algorithms, 18-example browser catalog, project introduction, worker runtime, and Pages workflow |
+| Examples and playground | Implemented and reviewed; publication in progress | Five algorithms, 18-example browser catalog, project introduction, worker runtime, and Pages workflow |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
@@ -140,9 +148,9 @@ Claude/Kimi/Grok review and Pages publication are the remaining steps. See
 
 ## Verification
 
-Latest verification: **334 tests passed on Python 3.11.15 and 3.14.7** on
-2026-09-14. This includes the 322-test audited baseline and 12 algorithm/adapter/
-site-build tests. **Eight Chromium browser tests pass**, including every bundled
+Latest verification: **335 tests passed on Python 3.11.15 and 3.14.7** on
+2026-09-14. This includes the 322-test audited baseline and 13 algorithm/adapter/
+site-build tests. **Nine Chromium browser tests pass**, including every bundled
 example through the real Pyodide runtime. `git diff --check` passed.
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
