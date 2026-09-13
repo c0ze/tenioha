@@ -25,6 +25,8 @@ and diagnostic locations share the documented line-ending rules, and all input
 paths accept exactly one initial BOM.
 
 - [Milestone progress and agent handoff](HANDOFF.md)
+- [Project introduction and browser playground](https://c0ze.github.io/tenioha/)
+- [Playground development and deployment](docs/PLAYGROUND.md)
 - [Current language and builtins](docs/LANGUAGE.md)
 - [Recorded language decisions](docs/DECISIONS.md)
 - [Claude, Kimi, and Grok audit and fixes](docs/AUDIT-0.7.md)
@@ -45,6 +47,11 @@ python -m tenioha --eval '(5 から 3 を 引く)'
 python -m tenioha examples/hello.ten
 python -m tenioha examples/arithmetic.ten
 python -m tenioha examples/factorial.ten
+python -m tenioha examples/fibonacci.ten
+python -m tenioha examples/fizzbuzz.ten
+python -m tenioha examples/primes.ten
+python -m tenioha examples/gcd.ten
+python -m tenioha examples/collatz.ten
 python -m tenioha examples/greeting.ten < examples/greeting.in
 python -m tenioha examples/lists.ten
 python -m tenioha examples/options.ten
@@ -69,6 +76,27 @@ Run the tests with:
 ```sh
 python -m unittest discover -s tests -v
 ```
+
+## Familiar algorithms
+
+These standalone examples use the existing language, with expected output in
+each matching `.out` file. The playground includes all 18 repository examples.
+
+| Example | Technique | Default output |
+|---|---|---|
+| [Fibonacci](examples/fibonacci.ten) | Linear accumulator recursion | First 12 numbers, `0` through `89` |
+| [FizzBuzz](examples/fizzbuzz.ten) | Pure decisions and ordered printing | 1 through 30, with Fizz/Buzz/FizzBuzz substitutions |
+| [Prime numbers](examples/primes.ten) | A typed predicate and trial division | Primes between 2 and 50 |
+| [Greatest common divisor](examples/gcd.ten) | Euclid's algorithm | `21` and `6` |
+| [Collatz](examples/collatz.ten) | Even/odd branching and a recursive sequence | The sequence from 7 to 1 |
+
+Use the input ranges described in each file. These are small teaching programs;
+the interpreter's 1024-active-call limit still applies. Try changing a final
+call locally or in the [browser playground](https://c0ze.github.io/tenioha/#example=fibonacci).
+
+To build and serve the website locally, run `python scripts/serve_site.py` and
+open `http://127.0.0.1:8765`. The site build uses Python's standard library; browser
+tests use Playwright. See [PLAYGROUND.md](docs/PLAYGROUND.md) for setup and checks.
 
 ## A first program
 

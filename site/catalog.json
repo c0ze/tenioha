@@ -1,0 +1,110 @@
+[
+  {
+    "id": "fibonacci",
+    "title": "Fibonacci",
+    "topic": "Recursion",
+    "description": "Build the first twelve Fibonacci numbers with a pair of accumulators. Change the final count, or call フィボナッチ with a nonnegative index."
+  },
+  {
+    "id": "fizzbuzz",
+    "title": "FizzBuzz",
+    "topic": "Conditionals",
+    "description": "The familiar counting exercise, from 1 to 30. A pure function chooses each word; a procedure prints the sequence. Keep the upper bound at least 1."
+  },
+  {
+    "id": "primes",
+    "title": "Prime numbers",
+    "topic": "Predicates",
+    "description": "Find primes between 2 and 50 by trial division. 素数か accepts nonnegative integers. Keep the final upper bound at least 2; small ranges work best."
+  },
+  {
+    "id": "gcd",
+    "title": "Greatest common divisor",
+    "topic": "Recursion",
+    "description": "Euclid’s algorithm in a handful of lines. Try your own pair of nonnegative integers in the final calls."
+  },
+  {
+    "id": "collatz",
+    "title": "Collatz sequence",
+    "topic": "Sequences",
+    "description": "Start at 7, halve even numbers, and triple odd numbers then add one. Try another small positive starting number. Long sequences may reach the call or time limit."
+  },
+  {
+    "id": "hello",
+    "title": "Hello, world",
+    "topic": "Getting started",
+    "description": "Your first particle call. Change the text inside the Japanese quotation marks and run it again."
+  },
+  {
+    "id": "arithmetic",
+    "title": "Arithmetic",
+    "topic": "Particles",
+    "description": "Try arithmetic with explicit argument roles. Reorder the arguments while keeping their particles attached."
+  },
+  {
+    "id": "factorial",
+    "title": "Factorial",
+    "topic": "Recursion",
+    "description": "A pure recursive function computes 6 factorial. Try another small nonnegative number."
+  },
+  {
+    "id": "greeting",
+    "title": "An interactive greeting",
+    "topic": "Input & output",
+    "description": "Read one line from the input box, bind it, and greet that person. Edit the supplied input below the editor."
+  },
+  {
+    "id": "strings",
+    "title": "Strings & escapes",
+    "topic": "Getting started",
+    "description": "Explore Japanese quotation marks, escaped characters, and string operations."
+  },
+  {
+    "id": "scope",
+    "title": "Lexical scope",
+    "topic": "Bindings",
+    "description": "Immutable bindings belong to their blocks. An inner scope may shadow an outer name."
+  },
+  {
+    "id": "lists",
+    "title": "Map & fold",
+    "topic": "Modules",
+    "description": "Import the bundled list library, transform a generic list, and combine its elements."
+  },
+  {
+    "id": "options",
+    "title": "Optional values",
+    "topic": "Types",
+    "description": "Use the bundled option library to express presence and absence explicitly."
+  },
+  {
+    "id": "closures",
+    "title": "Capturing closures",
+    "topic": "Functions",
+    "description": "Create independent increment functions, then use one to map a list. Each closure remembers its own increment."
+  },
+  {
+    "id": "closure_greeting",
+    "title": "A greeting that remembers",
+    "topic": "Closures & I/O",
+    "description": "Read a name once and capture it in a procedure that can greet twice. Try changing the input."
+  },
+  {
+    "id": "nested_patterns",
+    "title": "Nested patterns",
+    "topic": "Pattern matching",
+    "description": "Classify optional lists with ordered patterns and keep a matched value inside a closure."
+  },
+  {
+    "id": "compact",
+    "title": "Compact notation",
+    "topic": "Syntax",
+    "description": "Let particles touch integers and closing delimiters. Identifier words still keep explicit boundaries."
+  },
+  {
+    "id": "aliases",
+    "title": "Names & particle choices",
+    "topic": "Signatures",
+    "description": "Declare alternate function spellings and accepted particles explicitly. Their types and effects stay checked."
+  }
+]

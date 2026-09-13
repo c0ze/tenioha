@@ -35,6 +35,16 @@ Original reports, follow-ups, and finding dispositions are in
 `/tmp/tenioha-audit-YEdpGq`, `/tmp/tenioha-closeout-hc1fqpb8`, and local `.tincan/`
 (excluded from git). Do not repeat the original full-project review.
 
+Current task: add Fibonacci, FizzBuzz, primes, and related teaching examples,
+plus a GitHub Pages introduction and working browser playground. Implementation
+is on `feature/examples-playground`, based on `8d83495`. Five new standalone
+examples bring the catalog to 18. The site runs the unchanged 0.7.1 interpreter
+through pinned Pyodide 0.29.3 in a disposable worker. Native tests pass 334 cases
+on Python 3.11.15 and 3.14.7; eight real Chromium tests cover the full catalog,
+errors, I/O, cancellation, limits, responsive layout, and load-failure recovery.
+Claude/Kimi/Grok review and Pages publication are the remaining steps. See
+[PLAYGROUND.md](docs/PLAYGROUND.md) for building, serving, tests, and deployment.
+
 ## Milestones
 
 | Milestone | Status | Scope |
@@ -48,6 +58,7 @@ Original reports, follow-ups, and finding dispositions are in
 | Compact boundaries | Complete (0.6.0) | Adjacent particles after integers and closing delimiters, preserving whole identifier words |
 | Explicit aliases | Complete (0.7.0) | `別名 新名 は 対象`; per-parameter particle choices such as `に|へ`, retained in function types |
 | Multi-model audit | Complete (0.7.1) | Composed-type stack safety, consistent source input, clearer diagnostics, Claude/Kimi/Grok closeout passes and recorded dispositions |
+| Examples and playground | Implemented; review and publication in progress | Five algorithms, 18-example browser catalog, project introduction, worker runtime, and Pages workflow |
 | Later | Not started | Broader Japanese syntax, richer patterns/inference, tooling/backends, embedding |
 
 ## Current implementation
@@ -129,9 +140,10 @@ Original reports, follow-ups, and finding dispositions are in
 
 ## Verification
 
-Latest verification: **322 tests passed on Python 3.11.15 and 3.14.7** on
-2026-09-14. This includes the 305-test alias baseline and 17 audit regressions
-for composed types, source input, and diagnostics. `git diff --check` passed.
+Latest verification: **334 tests passed on Python 3.11.15 and 3.14.7** on
+2026-09-14. This includes the 322-test audited baseline and 12 algorithm/adapter/
+site-build tests. **Eight Chromium browser tests pass**, including every bundled
+example through the real Pyodide runtime. `git diff --check` passed.
 
 M1's resumed baseline was **91 passing tests** on Python 3.14.7. M2 adds tests
 in `test_types.py`, `test_function_values.py`, `test_modules.py`, and the CLI
@@ -171,7 +183,7 @@ inside nested blocks, type errors before I/O, one initial BOM across input
 paths, double-BOM rejection, literal newline preservation, six source line
 boundaries, original diagnostic offsets, and invalid entry filenames.
 
-All thirteen example files ran with their expected `.out` fixtures and passed
+All eighteen example files ran with their expected `.out` fixtures and passed
 `--check`, including both greeting input fixtures. Selected examples:
 
 | Example | Output |
@@ -183,6 +195,11 @@ All thirteen example files ran with their expected `.out` fixtures and passed
 | `nested_patterns.ten` | `未設定`, `空`, `一つ`, `複数`, `7` after optional-list matching and a closure capturing the first element |
 | `compact.ten` | `てにをは、少し短く。`, `2`, `2`, `36`, `11` using compact particles, closures, list operations, and nested patterns |
 | `aliases.ten` | `8`, `8`, `7`, `11` using alternate names, particle choices, indirect calls, constructor matching, and a closure |
+| `fibonacci.ten` | First 12 Fibonacci numbers, `0` through `89`, using linear accumulator recursion |
+| `fizzbuzz.ten` | FizzBuzz for 1 through 30 |
+| `primes.ten` | Primes between 2 and 50 using trial division |
+| `gcd.ten` | `21` and `6` using Euclid's algorithm |
+| `collatz.ten` | The Collatz sequence starting at 7 and ending at 1 |
 
 Twenty-three README/language-guide snippets were verified, including the deliberate
 nested-I/O error example, plus the corrected inline generic alias example.
@@ -254,13 +271,18 @@ python -m tenioha examples/closure_greeting.ten < examples/closure_greeting.in
 python -m tenioha examples/nested_patterns.ten
 python -m tenioha examples/compact.ten
 python -m tenioha examples/aliases.ten
+python -m tenioha examples/fibonacci.ten
+python -m tenioha examples/fizzbuzz.ten
+python -m tenioha examples/primes.ten
+python scripts/serve_site.py
 python -m tenioha --check examples/lists.ten
 ```
 
 ## Next work (not started)
 
-The user has not selected a post-0.7 target. Do not repeat the completed alias
-work. Suggested next milestone: an interactive REPL to make the language easier
+The browser playground is a fresh-program editor, not a persistent REPL. Do not
+repeat completed alias or playground work. A possible later milestone is an
+interactive REPL to make the language easier
 to explore. Before implementing it, specify multiline input, persistent bindings
 and declarations, error recovery, relative imports, and when checking permits
 IO. Acceptance should include defining a function across multiple lines, reusing

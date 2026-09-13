@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f2e9" />
+    <meta
+      name="description"
+      content="Tenioha is an experimental functional language with typed Japanese particles. Learn the idea and run Fibonacci, FizzBuzz, and more in your browser."
+    />
+    <title>Tenioha — meaning in the particles</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+JP:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./playground.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#playground">Skip to playground</a>
+    <header class="site-header wrap">
+      <a class="brand" href="./" aria-label="Tenioha home"
+        ><span class="brand-mark" lang="ja">て</span
+        ><span
+          >tenioha<span class="brand-reading" lang="ja">てにをは</span></span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#idea">The idea</a><a href="#playground">Playground</a
+        ><a href="#examples">Examples</a>
+        <a class="repo-link" href="https://github.com/c0ze/tenioha"
+          >GitHub <span aria-hidden="true">↗</span></a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero wrap" id="idea" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="status-dot"></span> An experiment in language & code
+            <span class="version">v{{VERSION}}</span>
+          </div>
+          <h1 id="hero-title">Meaning lives<br />in the <em>particles.</em></h1>
+          <p class="hero-description">
+            A small functional language where Japanese particles give arguments
+            their roles. Move the words. Keep the meaning.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#playground"
+              >Write your first line <span aria-hidden="true">↓</span></a
+            ><a
+              class="text-link"
+              href="https://github.com/c0ze/tenioha/blob/master/docs/LANGUAGE.md"
+              >Read the language guide <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <p class="hero-note">
+            Source on GitHub. No install needed to explore.
+          </p>
+        </div>
+        <div class="language-sheet" aria-label="Argument order demonstration">
+          <div class="sheet-top">
+            <span>ことば → code</span><span>FIELD NOTE / 001</span>
+          </div>
+          <div class="japanese-title" lang="ja" aria-hidden="true">
+            て<span>に</span>を<span>は</span><span class="title-stop">。</span>
+          </div>
+          <p class="sheet-definition">
+            <i>te·ni·o·ha</i> / the little words that hold a sentence together
+          </p>
+          <div class="call-demo" aria-live="polite">
+            <span class="paren">(</span
+            ><span id="argument-a" class="argument"
+              ><b>5</b><span class="particle from" lang="ja">から</span></span
+            ><span id="argument-b" class="argument"
+              ><b>3</b><span class="particle object" lang="ja">を</span></span
+            ><span class="predicate" lang="ja">引く</span
+            ><span class="paren">)</span><span class="equals">=</span
+            ><strong class="demo-result">2</strong>
+          </div>
+          <div class="demo-labels">
+            <span><i class="key from"></i>から = from</span
+            ><span><i class="key object"></i>を = object</span
+            ><span>引く = subtract</span>
+          </div>
+          <button id="swap" class="swap-button" type="button">
+            Swap the arguments <span aria-hidden="true">⇄</span>
+          </button>
+          <p class="sheet-caption">
+            The particles carry the roles.<br />The order can change; the answer
+            stays <b>2</b>.
+          </p>
+        </div>
+      </section>
+
+      <div class="principles wrap" aria-label="Language principles">
+        <div>
+          <span class="principle-number">01</span>
+          <p>
+            <strong>Roles, checked.</strong> Particles are part of the
+            signature.
+          </p>
+        </div>
+        <div>
+          <span class="principle-number">02</span>
+          <p>
+            <strong>Effects, explicit.</strong> Pure functions. Ordered I/O.
+          </p>
+        </div>
+        <div>
+          <span class="principle-number">03</span>
+          <p>
+            <strong>Small, expressive.</strong> Types, closures, and patterns.
+          </p>
+        </div>
+      </div>
+
+      <section
+        class="playground-section wrap"
+        id="playground"
+        aria-labelledby="playground-title"
+      >
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">THE PLAYGROUND</div>
+            <h2 id="playground-title">A little code. A new way to read it.</h2>
+          </div>
+          <span class="local-badge"
+            ><span class="status-dot"></span> Runs in your browser</span
+          >
+        </div>
+        <p class="section-intro">
+          Pick an example, change a line, and see what happens. The same
+          interpreter powers the command line and this playground.
+        </p>
+        <noscript
+          ><p class="notice">
+            Enable JavaScript to use the playground, or run the examples locally
+            with Python. The language guide and source links work without
+            JavaScript.
+          </p></noscript
+        >
+        <div class="playground">
+          <div class="toolbar">
+            <div class="example-control">
+              <label for="example">EXAMPLE</label
+              ><select id="example" disabled>
+                <option>Loading examples…</option>
+              </select>
+            </div>
+            <div class="editor-tools">
+              <button id="reset" class="tool-button" type="button" disabled>
+                Reset</button
+              ><button id="download" class="tool-button" type="button" disabled>
+                Download .ten <span aria-hidden="true">↓</span>
+              </button>
+            </div>
+          </div>
+          <div class="editor-grid">
+            <div class="source-panel">
+              <div class="panel-heading">
+                <label for="source" id="source-name">fibonacci.ten</label
+                ><span>TENIOHA <span class="muted">/ UTF-8</span></span>
+              </div>
+              <textarea
+                id="source"
+                aria-describedby="example-description editor-help"
+                spellcheck="false"
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                wrap="off"
+                maxlength="100000"
+                disabled
+              ></textarea>
+              <details id="input-details" class="input-details">
+                <summary>Program input <span>for 読む calls</span></summary>
+                <label class="sr-only" for="stdin"
+                  >Standard input, one line per 読む call</label
+                ><textarea
+                  id="stdin"
+                  spellcheck="false"
+                  placeholder="One line per 読む call…"
+                  maxlength="20000"
+                  rows="3"
+                  disabled
+                ></textarea>
+              </details>
+            </div>
+            <div class="output-panel">
+              <div class="panel-heading">
+                <h3>Output</h3>
+                <span id="elapsed">CONSOLE</span>
+              </div>
+              <div
+                id="output-container"
+                tabindex="0"
+                aria-label="Program output"
+              >
+                <pre id="output" class="output-placeholder">
+A sequence starts with a single step.
+
+Run the example to see its output.</pre>
+                <pre id="error" hidden></pre>
+              </div>
+              <div class="console-footer">
+                <span class="console-dot"></span
+                ><span id="runtime-status" role="status" aria-live="polite"
+                  >Loading examples…</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="run-bar">
+            <p id="editor-help">
+              Your code stays in this browser.<span
+                >First run takes a moment to prepare.</span
+              >
+            </p>
+            <div class="run-actions">
+              <button id="stop" class="button stop" type="button" hidden>
+                Stop <span aria-hidden="true">■</span></button
+              ><button
+                id="check"
+                class="button secondary"
+                type="button"
+                disabled
+              >
+                Check</button
+              ><button id="run" class="button primary" type="button" disabled>
+                Run code <span aria-hidden="true">▶</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="example-context">
+          <p id="example-description">Loading example notes…</p>
+          <span class="keyboard-hint"
+            ><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run · <kbd>⌘</kbd> on
+            Mac</span
+          >
+        </div>
+        <p class="playground-limits">
+          Each run starts fresh. Bundled list and option imports work here. Runs
+          stop after 10 seconds; output is limited to 64,000 characters.
+          <a
+            href="https://github.com/c0ze/tenioha/blob/master/docs/PLAYGROUND.md"
+            >How it works ↗</a
+          >
+        </p>
+      </section>
+
+      <section
+        class="examples-section wrap"
+        id="examples"
+        aria-labelledby="examples-title"
+      >
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">FAMILIAR PROBLEMS, DIFFERENT WORDS</div>
+            <h2 id="examples-title">Start somewhere you know.</h2>
+          </div>
+          <a
+            class="text-link"
+            href="https://github.com/c0ze/tenioha/tree/master/examples"
+            >All examples on GitHub ↗</a
+          >
+        </div>
+        <div class="example-cards">
+          <a class="example-card" data-example="fibonacci" href="#playground"
+            ><span class="card-category">01 / RECURSION</span>
+            <div class="number-art" aria-hidden="true">
+              0 <span>1</span> 1 <span>2</span> 3 <span>5</span>…
+            </div>
+            <h3>Fibonacci <span aria-hidden="true">↗</span></h3>
+            <p>
+              Two accumulators, one growing sequence. Follow recursion through
+              Japanese argument roles.
+            </p>
+            <span class="card-footer"
+              >Open in playground <span aria-hidden="true">→</span></span
+            ></a
+          >
+          <a class="example-card" data-example="fizzbuzz" href="#playground"
+            ><span class="card-category">02 / CONDITIONALS</span>
+            <div class="fizz-art" aria-hidden="true">
+              Fizz<span>Buzz</span><i>!</i>
+            </div>
+            <h3>FizzBuzz <span aria-hidden="true">↗</span></h3>
+            <p>
+              Count, branch, and print. A familiar exercise that separates pure
+              decisions from their output.
+            </p>
+            <span class="card-footer"
+              >Open in playground <span aria-hidden="true">→</span></span
+            ></a
+          >
+          <a class="example-card" data-example="primes" href="#playground"
+            ><span class="card-category">03 / PREDICATES</span>
+            <div class="prime-art" aria-hidden="true">
+              <span>2</span><span>3</span><s>4</s><span>5</span><s>6</s
+              ><span>7</span>
+            </div>
+            <h3>Prime numbers <span aria-hidden="true">↗</span></h3>
+            <p>
+              Ask a precise question of each number. Find the primes with a
+              small, typed predicate.
+            </p>
+            <span class="card-footer"
+              >Open in playground <span aria-hidden="true">→</span></span
+            ></a
+          >
+        </div>
+      </section>
+
+      <section class="about-section wrap" aria-labelledby="about-title">
+        <div>
+          <div class="eyebrow">A LANGUAGE IN THE MAKING</div>
+          <h2 id="about-title">
+            Japanese structure.<br />Functional foundations.
+          </h2>
+        </div>
+        <div class="about-copy">
+          <p>
+            Tenioha explores what happens when the little words in Japanese
+            become checked parts of a program. It brings together immutable
+            bindings, explicit types, lexical closures, algebraic data, and
+            pattern matching.
+          </p>
+          <p>
+            It’s a controlled programming language, with explicit word
+            boundaries and declared spellings. The aim is to make argument roles
+            visible and worth thinking about.
+          </p>
+          <p class="credits">
+            Inspired by <a href="https://github.com/kip-dili/kip">Kip</a>, with
+            <a href="https://nadesi.com/">Nadesiko</a> as important Japanese
+            prior art. Experimental, actively evolving, and open to curious
+            readers.
+          </p>
+          <a
+            class="text-link"
+            href="https://github.com/c0ze/tenioha/blob/master/docs/DESIGN.md"
+            >Explore the design notes ↗</a
+          >
+        </div>
+      </section>
+      <section class="local-section wrap">
+        <div>
+          <span class="eyebrow">TAKE IT WITH YOU</span>
+          <h2>Prefer your own terminal?</h2>
+          <p>Python 3.11 or later. No packages to install.</p>
+        </div>
+        <div class="terminal">
+          <span>$ git clone https://github.com/c0ze/tenioha.git</span
+          ><span>$ cd tenioha</span
+          ><span>$ python -m tenioha examples/fibonacci.ten</span>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="./"
+        ><span class="brand-mark" lang="ja">て</span><span>tenioha</span></a
+      ><span>Little particles. Plenty to explore.</span>
+      <div>
+        <a href="https://github.com/c0ze/tenioha">Source ↗</a
+        ><a href="https://github.com/c0ze/tenioha/issues">Feedback ↗</a
+        ><span>v{{VERSION}}</span>
+      </div>
+    </footer>
+  </body>
+</html>
