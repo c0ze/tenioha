@@ -1,0 +1,6 @@
+; Both forms subtract 3 from 5. Convert integers explicitly before printing.
+(((5 から 3 を 引く) を 文字列にする) を 表示する)。
+(((3 を 5 から 引く) を 文字列にする) を 表示する)。
+
+; Nested pure calls: (5 - 3) + 4 = 6.
+((((5 から 3 を 引く) に 4 を 足す) を 文字列にする) を 表示する)。

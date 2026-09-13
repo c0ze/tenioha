@@ -1,0 +1,8 @@
+; An explicit procedure sequences input, a pure computation, and output.
+手続き 挨拶 -> 単位 {
+    名前 は (読む)。
+    文 は (「こんにちは、」 と 名前 を 連結する)。
+    (文 を 表示する)
+}
+
+(挨拶)。

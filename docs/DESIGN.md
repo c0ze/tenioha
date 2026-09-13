@@ -1,128 +1,332 @@
-# Tenioha — design sketch
+# Tenioha — proposed Japanese core
 
-Nothing here is decided. This is the thinking so far, written down so a
-future session starts from something rather than nothing.
+Design following the [2026-09-13 investigation](RESEARCH.md). **M0, M1, M2, and
+the 0.4 closure and 0.5 nested-pattern extensions are implemented in Python**; [LANGUAGE.md](LANGUAGE.md) documents the runnable
+dialect. The later surface-syntax extensions below remain proposals. See
+[HANDOFF.md](../HANDOFF.md) for current progress and the next agent's starting point.
 
----
+## 1. Preserve the idea, redesign the grammar
 
-## 1. Particles as argument roles
+Keep Kip's typed argument roles, predicate-final calls, functional values,
+and separation of pure computations from effects. Represent Japanese particles
+directly rather than translating them into Kip's Turkish `Case` enum.
 
-The core mapping, against Kip's case list:
+Separate a **value type** from a **parameter role**. An integer does not
+permanently become an “accusative integer” when used with `を`. The particle
+labels that occurrence of an argument. Another occurrence of the same variable
+may supply `から` in another call.
 
-| Role | Kip (Turkish case) | Tenioha (particle) | Reads as |
-|---|---|---|---|
-| subject | nominative (bare) | が / は | the thing acting |
-| object | accusative `-i` | を | the thing acted on |
-| target | dative `-e` | に | to / onto |
-| location | locative `-de` | で | at / in / using |
-| source | ablative `-den` | から | from |
-| possession | genitive `-in` | の | of |
-| instrument | instrumental `-le` | と / で | with |
+Start with these separate internal concepts:
 
-Because the particle carries the role, **argument order is free**:
-
-```
-3を 5に 足す。
-5に 3を 足す。      ; same call
-```
-
-And a wrong particle is a compile error, not a bug:
-
-```
-3に 5に 足す。      ; error: 足す takes を and に, got two に
+```text
+Parameter = (local name, particle, value type)
+Signature = (function identity, parameters, result type, effect)
+Argument  = (expression, particle, source span)
+Call      = (function identity, arguments, source span)
+Effect    = Pure | IO
 ```
 
-That is the whole value proposition. Positional arguments are a convention
-we tolerate; particles are a convention a billion people already know.
+`Pure | IO` is an initial distinction, not a complete effect system. The checked
+core records the resolved function and parameter bindings so the interpreter
+does not repeat surface-level argument matching.
 
-## 2. Syntax sketch
+## 2. Call syntax
 
-Definition uses 〜とは…である, the ordinary Japanese way to define a term:
+Use parenthesized, predicate-final calls with explicit lexical boundaries:
 
-```
-あいさつとは、
-    名前を 読んで、
-    「こんにちは、」と 名前を 連結して 書く ことである。
-
-あいさつする。
-```
-
-Conditionals fall out of 〜なら:
-
-```
-否定とは、
-    真なら 偽、
-    偽なら 真 である。
+```text
+(5 から 3 を 引く)
+(3 を 5 から 引く)
+((5 から 3 を 引く) に 4 を 足す)
+(「こんにちは」 を 表示する)
 ```
 
-Signatures might read as ordinary Japanese too:
+The first two produce `2`; the nested expression produces `6`. `表示する`
+performs I/O and returns `単位`, the unit type.
 
+An initial expression grammar can be this small:
+
+```ebnf
+expression = integer | string | boolean | identifier | call ;
+call       = "(" , { argument } , identifier , ")" ;
+argument   = expression , particle ;
+particle   = "が" | "を" | "に" | "で" | "から" | "へ" | "と" | "まで" ;
 ```
-足し算とは、数を 数に 足して 数である。
+
+The lexer supplies distinct identifier and particle tokens. A zero-argument
+call is `(読む)`; bare `読む` is a name reference. Delimiters make nested
+calls explicit. M0/M1 call heads name a function; M2 adds explicit function
+references and indirect application with `適用`.
+
+This is Lisp-inspired expression structure with the predicate at the end.
+It does not yet imply macros, quotation, or code-as-data semantics. The EBNF
+above is the original M0 call subset. The current grammar, including M1
+declarations, bindings, blocks, and conditionals, is in [LANGUAGE.md](LANGUAGE.md).
+
+## 3. Argument matching
+
+These signatures are **notation for this document**, not declaration syntax:
+
+```text
+引く       (元: 整数 から, 量: 整数 を)       -> 整数   ! Pure
+足す       (元: 整数 に,   量: 整数 を)       -> 整数   ! Pure
+表示する   (内容: 文字列 を)                 -> 単位   ! IO
+読む       ()                               -> 文字列 ! IO
 ```
 
-Open: whether definitions end in である (declarative) or こと (nominalised),
-and whether the trailing 。is required. Both are aesthetic until there is a
-parser to argue with.
+For the first implementation:
 
-## 3. The politeness axis — the genuinely novel part
+1. Resolve one function by name. Do not add overloading yet.
+2. Reject duplicate particles in its declaration.
+3. Reject missing, unexpected, or duplicate particles in a call.
+4. Bind each argument to the parameter with that exact particle.
+5. Check each argument's value type and require a pure argument expression.
+6. Check the call's effect against its surrounding context.
+7. Emit a resolved call with arguments in the signature's canonical order.
 
-Japanese marks *register* independently of meaning. The same operation is
-書く / 書きます / お書きになる / 書かせていただく depending on who is
-speaking to whom about whom.
+There is no missing-particle fallback, inferred `が`, implicit conversion, or
+global `に`/`へ` alias. A later function-specific alias would map to one
+parameter identity; supplying both aliases must count as supplying that
+parameter twice.
 
-No mainstream type system has an axis like this, and it is sitting there
-unused. Candidates for what it could encode:
+### Repeated particles are a real limitation
 
-- **Effects.** Plain form = pure, polite form = performs I/O. This is the
-  closest analogue to what Kip does with mood, and the most obvious.
-- **Capability / privilege.** 尊敬語 for operations that require elevated
-  rights, 謙譲語 for operations that yield them. Grammatically, honorifics
-  already encode *who is permitted what* — which is what a capability system
-  is.
-- **Visibility.** Plain = module-private, polite = exported. "You speak
-  politely to strangers" is a startlingly good mnemonic for a public API.
+Natural Japanese can use `に` for both a destination and a time. A unique-label
+rule therefore accepts a controlled subset of Japanese, not all Japanese.
+Two `に` arguments cannot be assigned arbitrary roles from the particle alone.
 
-The capability reading is the most interesting and the least explored. It is
-also the one that would make Tenioha a research contribution rather than a
-port.
+For v0, reject such signatures; use separate operations or a record argument
+when records exist. Do not quietly fall back to positional matching. Later
+options include explicit role names or matching `(particle, type)` when there
+is exactly one complete assignment. Type-based matching must reject ambiguity,
+especially with generics and overlapping types. This is deliberately stricter
+than Kip's occurrence-order handling of repeated cases.
 
-## 4. Implementation — first real decision
+## 4. Japanese-specific choices
 
-Not chosen. The trade-offs as they stand:
+| Form | Proposed treatment | Reason |
+|---|---|---|
+| `が` | Explicit parameter label | Common subject marking; no automatically supplied subject |
+| `を` | Explicit parameter label | Often an object, but the signature determines its meaning |
+| `に` | Explicit parameter label | Can describe a target, recipient, time, and other relations |
+| `で` | Explicit parameter label | Can describe a means or an action's location |
+| `から`, `まで` | Separate labels | Useful for source/boundary operations; endpoint inclusion belongs to each API |
+| `へ` | Separate label | No automatic substitution for `に` |
+| `と` | Explicit label in the core | Coordination and quotation require separate grammar later |
+| `は` | Explicit immutable binding in M1 | Not an alias for `が`; no ambient topic variable |
+| `の` | Reserved for a later genitive/projection design | `利用者 の 名前 の 長さ` needs explicit association rules |
+| `て` | Consider later as sequencing syntax | Verb conjugation and value binding must be specified first |
+| `なら` | M1 conditional separator; M2 match-arm separator | Pure conditions/subjects and equally typed branches; exhaustive constructors for matching |
 
-- **Python** — fastest to a working prototype, best for exploring syntax
-  before committing. Weakest as a shipped artefact.
-- **Rust** — best if this ever wants to be embedded, fast, or trusted.
-  Slowest to iterate on grammar.
-- **TypeScript** — best if the first audience is a web playground, which for
-  an experimental language is a real argument: people try what they can try
-  without installing.
+These are language-design choices, not a claim that Japanese particles each
+have one meaning. The [TUFS materials](RESEARCH.md#sources) help distinguish
+topic, case, and connective functions.
 
-Recommendation: **prototype in Python, port once the grammar stops moving.**
-Language design is iteration on syntax, and the prototype is disposable.
+### Word boundaries and IME input
 
-Whatever the choice: no external morphological analyser. Japanese particles
-are invariant tokens, so the tokeniser stays self-contained, and the language
-keeps the property that there is nothing to sandbox.
+- Require whitespace between word tokens initially, including the particle
+  after a bare identifier: `たから を` contains the single identifier `たから`.
+  Never split it into `た` and `から` by suffix matching.
+- Parentheses delimit calls. Accept `「…」` strings; define backslash escapes
+  for a literal backslash, a closing `」`, newline, and tab. Strings and
+  comments are never particle-tokenized.
+- Specify Unicode identifier rules and compare names in NFC. Preserve original
+  source offsets for diagnostics. Kanji, kana, and different spellings are not
+  automatically equivalent identifiers.
+- Accept U+3000 fullwidth space as whitespace. Initially use ASCII parentheses,
+  minus signs, and digits; diagnose unsupported fullwidth equivalents. Later,
+  an explicit punctuation mapping can improve IME ergonomics without applying
+  NFKC to the entire program or modifying string contents.
+- Permit kana identifiers and invented names. A dictionary should not decide
+  whether a programmer is allowed to name a value.
+- A compact reader could later accept unambiguous boundaries such as `5から`,
+  `「文字列」を`, or `(式)を`. No-space bare identifiers need a separate rule;
+  adding a particle regex does not solve this.
 
-## 5. Open questions
+These restrictions allow an initial implementation without an external
+morphology engine. Supporting `書く` / `書いて` / `書きます` automatically
+is a separate feature. Start with exact names, then consider declared inflected
+aliases; do not infer arbitrary stems by deleting a suffix.
 
-1. Does the particle bind to the **value** or to the **parameter**? Kip binds
-   to the parameter. Binding to the value would allow genuinely free-floating
-   arguments but makes inference much harder.
-2. What happens with **は vs が**? Japanese distinguishes topic from subject;
-   most type systems have no equivalent. Ignoring it is easiest. Using it —
-   topic as an implicit/ambient parameter — is more interesting.
-3. **Vocabulary.** Are keywords real Japanese words (足す, 読む, 書く) or
-   invented? Real words make it readable and make error messages natural;
-   they also make the parser's job harder and collide with user identifiers.
-4. Does it write **vertically**? Almost certainly not. Worth asking once.
-5. Is there an **English mode** — same semantics, particles as `-to`, `-from`,
-   `-with` suffixes? That would make the idea legible to people who cannot
-   read Japanese, at the cost of the thing that makes it beautiful.
+## 5. Effects and politeness
 
-## 6. Explicitly out of scope for now
+Dictionary forms can name either pure functions or I/O procedures. The
+declaration and checked body determine the effect. `表示する` remains effectful
+even though it is not polite; a polite alias would have the same type and
+effect as its canonical function.
 
-Performance, a standard library, tooling, packaging. This is a question about
-grammar. It earns those things only if the grammar turns out to be good.
+Do not use honorific or humble speech to grant permissions. If capabilities
+are added, represent them as actual values/permissions checked by the runtime
+and type system. Register can be an optional presentation or style convention.
+It is not, by itself, evidence of purity, public visibility, or authority.
+
+### Sequencing before reordering
+
+Reject I/O calls nested inside argument expressions, including zero-argument
+`(読む)`. Bind their results in an explicitly ordered procedure first. This
+M1 example is executable:
+
+```text
+手続き あいさつ -> 単位 {
+    名前 は (読む)。
+    文 は (「こんにちは、」 と 名前 を 連結する)。
+    (文 を 表示する)
+}
+(あいさつ)
+```
+
+Here `連結する` takes a `文字列` with `と` followed by a `文字列` with `を`,
+concatenates in that parameter order, and is pure. The sequence executes top
+to bottom; bindings are lexical and immutable. Adding `を` to a name does not
+bind it, and there is no implicit “previous result”.
+
+Canonical parameter order is also the evaluation order for pure arguments.
+Reordering their written positions preserves bindings and uses that same
+canonical evaluation order. This matters even for pure code that diverges or
+raises an arithmetic error. Explicit effects remain in statement order.
+
+## 6. Implementation milestones
+
+Build a fresh Japanese frontend and small core; do not fork Kip and replace
+Turkish strings. Its morphology and elaboration are closely coupled.
+
+M0 uses a Python reference interpreter with no third-party dependencies. This
+makes it straightforward to change the grammar and check its behavior. A later
+browser or native runtime can use the same examples and conformance tests;
+no port is selected yet.
+
+### M0 — executable particle-call experiment (implemented)
+
+The interpreter implements tokenization, source spans, the expression grammar,
+`整数`, `文字列`, `真偽値`, and `単位`; fixed builtin signatures; strict
+particle/type matching; and an explicit effect context for top-level commands.
+Pure expressions are accepted there, but nested effectful arguments are
+rejected. Entire files are checked before execution. The CLI supports files,
+inline evaluation, checking without execution, and a pure context.
+
+The current reader also defines line comments, optional top-level `。`, string
+escapes, NFC names, and explicit limits; see [LANGUAGE.md](LANGUAGE.md).
+
+### M1 — a usable functional language (implemented)
+
+M1 implements declarations with named parameters and return types, immutable
+lexical bindings, explicit I/O sequences, direct/mutual recursion, and a lazy
+conditional. User-defined pure functions and IO procedures are checked against
+their declared return type and effect. Every body is checked before top-level
+execution, including uncalled functions. Source signatures are hoisted to
+support forward calls; values remain sequential and lexical.
+
+Selected explicit `関数`/`手続き` declarations, `名前 は 式` bindings, and
+`もし 条件 なら { … } そうでなければ { … }`. The comparison with explanatory
+Japanese is recorded in [DECISIONS.md](DECISIONS.md).
+
+The evaluator uses an explicit stack with at most 1024 active user calls.
+Functions do not capture top-level or caller values; pass those as parameters.
+Definitions are file-scoped, and values/functions have separate namespaces.
+M1 did not include closures or tail-call optimization. The 0.4 extension below
+adds anonymous closures while retaining the named-function scope rules.
+
+### M2 — Kip-like expressiveness (implemented, 0.3.0)
+
+M2 implements nominal algebraic types with particle-labelled constructors,
+explicit generic parameters and type arguments, and exhaustive flat constructor
+matching. Generic bodies are checked against abstract type parameters, even
+when unused. Match subjects are pure; branches retain lexical scope, effects,
+and lazy evaluation.
+
+Function values carry ordered particle/type pairs, a result type, and an effect.
+`参照` obtains a named function/procedure/constructor and `適用` invokes a
+function value. Its callee evaluates first and must be pure; arguments retain
+canonical evaluation order. IO cannot be passed as a pure function type.
+Closures and anonymous functions are not part of this milestone.
+
+Aliased, relative file imports expose a module's own type and function
+declarations. Imported files contain declarations only. The entire import graph
+is loaded and checked before entry statements execute, with cycle detection
+and nominal type identity shared across aliases of the same canonical path.
+The minimal source library provides generic lists (length/map/left-fold) and
+optional values (default/map). See [LANGUAGE.md](LANGUAGE.md) for syntax.
+
+### 0.4 — lexical closures (implemented)
+
+Anonymous `関数`/`手続き` expressions omit the declaration name and return a
+function value. They retain only the free lexical values used by their checked
+body, including values needed by nested closures. Capture snapshots are immutable;
+parameters and local bindings follow existing shadowing rules. Captures survive
+factory returns and are independent across factory calls.
+
+Closure creation is pure and delays the body. Each body is checked eagerly under
+its declared result type and effect; calling a procedure closure remains IO.
+Generic factories can return closures using their enclosing type parameters.
+The existing explicit evaluator stack and call limit cover closure calls too.
+Named declarations remain file-scoped and keep their original no-capture rules.
+
+### 0.5 — nested patterns and ordered arms (implemented)
+
+Constructor fields can recursively contain patterns. Bare names bind whole
+values and `_` discards them, including at the root. Arms run in source order;
+repeated outer constructors and partial overlaps are allowed when each arm
+covers new cases. All bindings across a pattern must be unique except `_`.
+
+The checker verifies particle roles and generic/nominal types at every level,
+then uses constructor-matrix coverage to detect missing combinations and arms
+covered by earlier arms. Missing-case errors include an uncovered pattern.
+Coverage preserves correlations between fields; it does not merely collect
+constructors appearing in each field independently. Analysis and runtime
+matching use explicit work stacks, with a 50,000-state coverage limit per match.
+
+Every body remains eagerly checked. The subject executes once, and failed arms
+leave no bindings behind. The selected arm's nested bindings can be captured by
+closures. Literal patterns, guards, primitive matching, and proofs that recursive
+types have no finite values remain outside this extension.
+
+### Later extensions
+
+Explore argument aliases, constrained compact Japanese,
+`の` projections, `て` chains, and explicit inflected spellings.
+
+Porting, a JS backend, editor support, caching, macros, and game embedding come
+after core semantics. A future untrusted-program runner still needs appropriate
+isolation and resource limits; avoiding morphology does not remove that need.
+
+## 7. Acceptance cases for the first interpreter
+
+M0 cases are covered by `tests/test_language.py` and `tests/test_cli.py`.
+M1's `tests/test_functions.py` additionally verifies source declarations,
+normalized parameter/binding names, procedure ordering, effect propagation,
+scope/shadowing, branch laziness/types, return types, and direct/mutual recursion.
+M2 adds `tests/test_types.py`, `tests/test_function_values.py`, and
+`tests/test_modules.py` for constructors/generics, exhaustive matches,
+function signatures/effects, and module identity/loading/diagnostics.
+The 0.4 `tests/test_closures.py` adds lexical capture, lifetime, generic factory,
+shadowing, delayed execution, and closure type/effect tests.
+The 0.5 `tests/test_patterns.py` covers nested patterns, ordered overlaps,
+missing combinations, unreachable arms, aliases, and captured bindings. An
+independent finite-domain oracle checks 729 three-arm pattern combinations.
+
+| Case | Expected result |
+|---|---|
+| `(5 から 3 を 引く)` and its argument permutation | Both evaluate to `2` |
+| `(3 から 5 を 引く)` | `-2`; roles matter for a noncommutative operation |
+| `((5 から 3 を 引く) に 4 を 足す)` | `6` |
+| `(3 に 5 に 足す)` | Duplicate `に` and missing `を`, with spans |
+| `(5 から 引く)` | Missing `を` |
+| `(5 から 3 を 1 で 引く)` | Unexpected `で` |
+| `(「五」 から 3 を 引く)` | `から` expects `整数`, received `文字列` |
+| A signature declaring `に` twice | Declaration error, even if its types differ |
+| A `は` argument where `が` is declared | Reject reserved/wrong particle; no implicit substitution |
+| `(「こんにちは」 を 表示する)` in an effectful command context | Prints the text and returns unit |
+| The same call in a pure checker context (`--pure`) | Effect error |
+| `((読む) を 表示する)` | Nested effect error before any input is read |
+| `たから` and `たから を` in lexer tests | Preserve the identifier; the latter adds a separate label |
+| `「は、が、を、から」` | One unchanged string token |
+| A valid string containing an escaped closing quote | One string containing the literal quote |
+| Missing `)` or an unterminated `「` string | Precise syntax error |
+| NFC-equivalent function name spellings | Same lookup; original source spans preserved |
+| ASCII versus fullwidth spaces | Same token boundaries |
+| Fullwidth digits in the initial reader | Clear unsupported-token error |
+
+Four-parameter permutations are tested for host builtins, source functions,
+constructors, and indirect calls. M2 tests preserve those bindings and effects
+through function values and verify generic substitutions, exhaustive matches,
+module cycles, and errors in unused imported bodies before program I/O.

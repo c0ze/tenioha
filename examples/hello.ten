@@ -1,0 +1,2 @@
+; A string argument with を; the function comes last.
+(「こんにちは、世界！」 を 表示する)。

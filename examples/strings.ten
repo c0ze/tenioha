@@ -1,0 +1,3 @@
+; Particle labels determine concatenation order, even when arguments move.
+((「こんにちは、」 と 「世界！」 を 連結する) を 表示する)。
+((「世界！」 を 「こんにちは、」 と 連結する) を 表示する)。

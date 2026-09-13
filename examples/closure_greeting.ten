@@ -1,0 +1,11 @@
+; Read once; the returned procedure retains the name and may be called repeatedly.
+手続き 準備 -> 手続き[-> 単位] {
+    名前 は (読む)。
+    手続き -> 単位 {
+        ((「こんにちは、」 と 名前 を 連結する) を 表示する)
+    }
+}
+
+挨拶 は (準備)。
+(適用 挨拶)。
+(適用 挨拶)。
