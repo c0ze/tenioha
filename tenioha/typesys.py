@@ -40,8 +40,15 @@ class DataType:
 
     @property
     def value(self) -> str:
-        arguments = "<" + ", ".join(t.value for t in self.arguments) + ">" if self.arguments else ""
-        return self.name + arguments
+        return _type_text(self)
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self):
+            return NotImplemented
+        return _type_equal(self, other)
+
+    def __hash__(self) -> int:
+        return _type_hash(self)
 
 
 @dataclass(frozen=True)
@@ -72,13 +79,99 @@ class FunctionType:
 
     @property
     def value(self) -> str:
-        keyword = "関数" if self.effect is Effect.PURE else "手続き"
-        parameters = ", ".join(f"{kind.value} {'|'.join((particle, *aliases))}"
-                               for (particle, kind), aliases in zip(self.parameters, self.aliases))
-        return f"{keyword}[{parameters} -> {self.result_type.value}]"
+        return _type_text(self)
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self):
+            return NotImplemented
+        return _type_equal(self, other)
+
+    def __hash__(self) -> int:
+        return _type_hash(self)
 
 
 Type = ValueType | TypeVariable | DataType | FunctionType
+
+
+def _type_equal(left: Type, right: Type) -> bool:
+    # Generic substitution can compose types deeper than any source annotation.
+    # Do not add Python recursion to the checker's surrounding expression stack.
+    pending, seen = [(left, right)], set()
+    while pending:
+        left, right = pending.pop()
+        pair = (id(left), id(right))
+        if left is right or pair in seen:
+            continue
+        if type(left) is not type(right):
+            return False
+        seen.add(pair)
+        if isinstance(left, DataType):
+            if left.identity != right.identity or len(left.arguments) != len(right.arguments):
+                return False
+            pending.extend(zip(left.arguments, right.arguments))
+        elif isinstance(left, FunctionType):
+            if (left.effect is not right.effect or left.aliases != right.aliases
+                    or tuple(p for p, _ in left.parameters) != tuple(p for p, _ in right.parameters)):
+                return False
+            pending.append((left.result_type, right.result_type))
+            pending.extend((a, b) for (_, a), (_, b) in zip(left.parameters, right.parameters))
+        elif left != right:
+            return False
+    return True
+
+
+def _type_hash(kind: Type) -> int:
+    hashes, pending = {}, [(False, kind)]
+    while pending:
+        finish, current = pending.pop()
+        key = id(current)
+        if key in hashes:
+            continue
+        if isinstance(current, DataType):
+            children = current.arguments
+            if finish:
+                hashes[key] = hash((type(current), current.identity, tuple(hashes[id(t)] for t in children)))
+        elif isinstance(current, FunctionType):
+            children = tuple(t for _, t in current.parameters) + (current.result_type,)
+            if finish:
+                parameters = tuple((p, hashes[id(t)]) for p, t in current.parameters)
+                hashes[key] = hash((type(current), parameters, hashes[id(current.result_type)], current.effect, current.aliases))
+        else:
+            hashes[key] = hash(current)
+            continue
+        if not finish:
+            pending.append((True, current))
+            pending.extend((False, child) for child in reversed(children))
+    return hashes[id(kind)]
+
+
+def _type_text(kind: Type) -> str:
+    pieces, pending = [], [kind]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, str):
+            pieces.append(current)
+        elif isinstance(current, DataType):
+            pieces.append(current.name)
+            if current.arguments:
+                pieces.append("<")
+                pending.append(">")
+                for index in range(len(current.arguments) - 1, -1, -1):
+                    pending.append(current.arguments[index])
+                    if index:
+                        pending.append(", ")
+        elif isinstance(current, FunctionType):
+            pieces.append("関数[" if current.effect is Effect.PURE else "手続き[")
+            pending.extend(("]", current.result_type, " -> "))
+            for index in range(len(current.parameters) - 1, -1, -1):
+                particle, parameter_type = current.parameters[index]
+                pending.append(" " + "|".join((particle, *current.aliases[index])))
+                pending.append(parameter_type)
+                if index:
+                    pending.append(", ")
+        else:
+            pieces.append(current.value)
+    return "".join(pieces)
 
 
 @dataclass(frozen=True)
@@ -138,14 +231,31 @@ class DataDefinition:
 
 
 def substitute(kind: Type, substitutions: Mapping[TypeVariable, Type]) -> Type:
-    if isinstance(kind, TypeVariable):
-        return substitutions.get(kind, kind)
-    if isinstance(kind, DataType):
-        return replace(kind, arguments=tuple(substitute(t, substitutions) for t in kind.arguments))
-    if isinstance(kind, FunctionType):
-        return FunctionType(tuple((p, substitute(t, substitutions)) for p, t in kind.parameters),
-                            substitute(kind.result_type, substitutions), kind.effect, aliases=kind.aliases)
-    return kind
+    resolved, pending = {}, [(False, kind)]
+    while pending:
+        finish, current = pending.pop()
+        key = id(current)
+        if key in resolved:
+            continue
+        if isinstance(current, TypeVariable):
+            resolved[key] = substitutions.get(current, current)
+            continue
+        if isinstance(current, DataType):
+            children = current.arguments
+            if finish:
+                resolved[key] = replace(current, arguments=tuple(resolved[id(t)] for t in children))
+        elif isinstance(current, FunctionType):
+            children = tuple(t for _, t in current.parameters) + (current.result_type,)
+            if finish:
+                resolved[key] = FunctionType(tuple((p, resolved[id(t)]) for p, t in current.parameters),
+                                            resolved[id(current.result_type)], current.effect, aliases=current.aliases)
+        else:
+            resolved[key] = current
+            continue
+        if not finish:
+            pending.append((True, current))
+            pending.extend((False, child) for child in reversed(children))
+    return resolved[id(kind)]
 
 
 def instantiate(signature: Signature, arguments: tuple[Type, ...], span: Span) -> Signature:
