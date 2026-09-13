@@ -25,9 +25,9 @@ reproduced locally before their fixes.
 |---|---|---|---|---|
 | A1 | Medium | `typesys.py:43,74` and generated type equality: composing two 110-level generic types, then comparing them or formatting a type error inside 125 nested blocks raises `RecursionError` on Python 3.11. Every written annotation and expression remains within its limit. | Orchestrator; independently confirmed by Claude | Iterative type equality, consistent hashing, formatting, and substitution. Valid source compiles; invalid source reports `E_TYPE` before I/O. |
 | A2 | Low | `syntax.py:593`: `{ 別名 甲 は 足す }` reports a generic expression error instead of explaining the file-scope restriction. | Claude, Kimi | Include `別名` in the `E_DEFINITION` diagnostic; cover blocks, functions, and conditional arms. |
-| A3 | Low | `syntax.py:83`: `run('\ufeff(3 を 5 から 引く)')` rejects the same initial BOM accepted in a file. | Kimi | Skip one initial BOM in the reader, preserving original spans and literal string content. Cover embedding, `--eval`, files, and caret alignment. |
+| A3 | Low | `syntax.py:83`: `run('\ufeff(3 を 5 から 引く)')` rejects the same initial BOM accepted in a file. | Kimi | Skip one initial BOM only in the reader, preserving original spans and literal string content. File decoding leaves the BOM intact; double-BOM entries/imports are rejected. |
 | A4 | Low | `core.py:349-368`: a missing `へ\|に` parameter reports only `へ` in a direct call but only `に` in an indirect call. | Grok | List the full sorted choice set for each missing slot; both forms now report `に\|へ`. |
-| A5 | Low | `syntax.py:95-98`: `; ignored` followed by CR or U+2028 silently consumes the next statement on string-input paths; diagnostic lines use a different boundary rule from whitespace. | Grok; CR case confirmed locally | Share LF/CRLF/CR/U+0085/U+2028/U+2029 boundaries between comments and source locations. Count CRLF once; retain original offsets and string contents. |
+| A5 | Low | `syntax.py:95-98`: `; ignored` followed by CR or U+2028 silently consumes the next statement on string-input paths; diagnostic lines use a different boundary rule from whitespace. File decoding also rewrites literal CR/CRLF characters. | Grok; Kimi final review; locally confirmed | Share LF/CRLF/CR/U+0085/U+2028/U+2029 boundaries between comments and source locations. Decode files without newline translation; count CRLF once and retain original offsets/string contents. |
 | A6 | Documentation | `LANGUAGE.md:274`: a schematic `写す` alias example supplies one type argument although both library functions use two. | Claude | Use a qualified list-library target and `参照 写します<整数, 文字列>`. |
 | A7 | Info | `__main__.py:23,37`: calling `main(['bad\0name.ten'])` directly from Python leaks `ValueError`. OS process arguments cannot contain NUL. | Claude | Convert the invalid entry filename into the normal CLI error return without a traceback. |
 
@@ -74,13 +74,21 @@ as in files. Only one BOM at the start of source is skipped.
 
 ## Verification and review status
 
-- 318 tests pass on Python 3.11.15 and Python 3.14.7 after the implementation fixes.
+- 322 tests pass on Python 3.11.15 and Python 3.14.7 after the implementation fixes.
 - New tests cover the composed-type failures, 600-level type operations, generic
   owner/effect/choice preservation, BOM positions, six line-ending forms, mixed
   lines, comment termination, alias diagnostics, and entry-path errors.
 - Baseline probes also covered 10,000 deterministic malformed token streams and
   four expression nesting shapes, with no uncaught host exceptions.
-- Final example/doc verification and review of the fixed branch are in progress.
+- All 13 examples match their output fixtures and pass `--check` on both versions.
+  The 23 README/guide text snippets and corrected inline alias example also pass.
+- 5,000 generated type comparisons/substitutions agree with an independent
+  recursive oracle, including ignored display names and equal-object hashes.
+- Review round 1 caught a double-BOM regression: `utf-8-sig` decoding and the new
+  reader each removed one BOM. [Codex's report](reviews/2026-09-13-0.7/codex-round-1.md)
+  is retained. The correction centralizes BOM handling in the reader, adds
+  double-BOM entry/import tests, and preserves file string line endings noted
+  by Kimi. Round 2 reviews these corrections before landing.
 
 The interpreter remains a reference implementation with the limits documented in
 [LANGUAGE.md](LANGUAGE.md). This review did not establish an untrusted-code

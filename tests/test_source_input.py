@@ -83,6 +83,62 @@ class SourceInputTests(unittest.TestCase):
         self.assertIn('tenioha:', stderr.getvalue())
         self.assertNotIn('Traceback', stderr.getvalue())
 
+    def test_double_bom_entry_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'input.ten'
+            path.write_bytes('\ufeff\ufeff(「early」を 表示する)'.encode('utf-8'))
+            for flags in [(), ('--check',)]:
+                result = subprocess.run([sys.executable, '-m', 'tenioha', *flags, str(path)], cwd=ROOT,
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual((result.returncode, result.stdout), (1, ''))
+                self.assertIn(f'{path}:1:2: E_TOKEN', result.stderr)
+                self.assertNotIn('Traceback', result.stderr)
+
+    def test_import_reader_accepts_exactly_one_bom_and_preserves_spans(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'lib.ten'
+            entry = root / 'main.ten'
+            declaration = '関数 一 -> 整数 { 1 }'
+            path.write_text('\ufeff' + declaration, encoding='utf-8')
+            self.assertEqual(run('取込 「lib.ten」 と 元。(元.一)', filename=str(entry)), [1])
+            path.write_text('\ufeff\ufeff' + declaration, encoding='utf-8')
+            stdout = io.StringIO()
+            with self.assertRaises(Diagnostic) as caught:
+                run('(「early」を 表示する) 取込 「lib.ten」 と 元', filename=str(entry), stdout=stdout)
+            error = caught.exception
+            self.assertEqual((error.code, error.span.source.name, error.span.line, error.span.column),
+                             ('E_TOKEN', str(path), 1, 2))
+            self.assertEqual(stdout.getvalue(), '')
+
+    def test_file_and_import_strings_preserve_literal_line_endings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry, library = root / 'main.ten', root / 'lib.ten'
+            for ending in LINE_ENDINGS:
+                with self.subTest(ending=repr(ending)):
+                    content = '前' + ending + '後'
+                    entry.write_bytes(('\ufeff(「' + content + '」を 表示する)').encode('utf-8'))
+                    stdout = io.StringIO()
+                    with contextlib.redirect_stdout(stdout):
+                        self.assertEqual(main([str(entry)]), 0)
+                    self.assertEqual(stdout.getvalue(), content + '\n')
+                    library.write_bytes(('\ufeff関数 文 -> 文字列 { 「' + content + '」 }').encode('utf-8'))
+                    self.assertEqual(run('取込 「lib.ten」 と 元。(元.文)', filename=str(entry)), [content])
+
+    def test_import_diagnostics_keep_original_crlf_text_and_bom_offsets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            library = root / 'lib.ten'
+            source = '\ufeff; comment\r\n関数 甲 -> 整数 { (3に 5に 足す) }'
+            library.write_bytes(source.encode('utf-8'))
+            with self.assertRaises(Diagnostic) as caught:
+                run('取込 「lib.ten」 と 元', filename=str(root / 'main.ten'))
+            self.assertEqual(caught.exception.code, 'E_ARGUMENTS')
+            self.assertEqual(caught.exception.span.source.text, source)
+            self.assertEqual(caught.exception.span.line, 2)
+            self.assertEqual(source[caught.exception.span.start:caught.exception.span.end], 'に')
+
 
 if __name__ == "__main__":
     unittest.main()

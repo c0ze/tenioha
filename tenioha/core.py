@@ -516,7 +516,7 @@ class Compiler:
                     raise Diagnostic("E_IMPORT", "Module paths must be nonempty and relative to the importing file.", item.span)
                 try:
                     path = (Path(key).parent / item.path).resolve()
-                    imported_text = path.read_text(encoding="utf-8-sig")
+                    imported_text = read_source(path)
                 except (OSError, UnicodeError, ValueError, RuntimeError) as error:
                     raise Diagnostic("E_IMPORT", f"Cannot import {item.path!r}: {error}", item.span) from None
                 module.imports[item.alias.name] = self.load(imported_text, str(path), import_span=item.span)
@@ -620,6 +620,12 @@ class Compiler:
             if body.value_type != signature.result_type:
                 raise Diagnostic("E_RETURN", f"{signature.name} declares {signature.result_type.value} but its body returns {body.value_type.value}.", body.span)
             self.definitions[signature.key] = CheckedFunction(signature, body)
+
+
+def read_source(path: Path) -> str:
+    """Decode UTF-8 without removing BOMs or rewriting literal line endings."""
+    with path.open(encoding="utf-8", newline="") as source:
+        return source.read()
 
 
 def compile_source(text: str, *, filename: str = "<input>", allow_io: bool = True,

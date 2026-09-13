@@ -661,7 +661,9 @@ performs no program I/O, although imports read source files. The test suite uses
 invalid programs do not read or print, and subprocesses to verify CLI behavior.
 Source strings passed to `compile_source`, `run`, or `--eval` may include one
 initial BOM. The reader skips it while keeping original source offsets; BOMs
-inside strings remain literal content. `filename` identifies the entry module
+inside strings remain literal content. Entry files and imports use the same
+reader and preserve literal CR/CRLF characters without newline translation.
+`filename` identifies the entry module
 as well as providing a base for imports; use the entry's path, not an imported
 library's path.
 

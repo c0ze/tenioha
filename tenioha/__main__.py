@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 from . import Diagnostic, __version__, compile_source, execute
-from .core import format_value
+from .core import format_value, read_source
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("supply either a file or --eval SOURCE")
     try:
         filename = "<eval>" if args.eval is not None else args.file
-        text = args.eval if args.eval is not None else Path(args.file).read_text(encoding="utf-8-sig")
+        text = args.eval if args.eval is not None else read_source(Path(args.file))
         program = compile_source(text, filename=filename, allow_io=not args.pure)
         if args.check:
             types = f", {len(program.types)} type(s)" if program.types else ""

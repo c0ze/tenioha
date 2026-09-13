@@ -26,8 +26,10 @@ fixes for confirmed findings. Work is on `audit/multi-model-0.7`, based on
 `40c2e08`; the untouched 305-test baseline passed. All three read-only reviews
 completed through local tincan listeners. Original reports, a Claude follow-up,
 and finding dispositions are in [the audit record](docs/AUDIT-0.7.md).
-The **0.7.1** implementation fixes pass 318 tests on Python 3.11.15 and 3.14.7.
-Final review of the fixed branch and final example/doc verification are underway.
+The **0.7.1** implementation fixes pass 322 tests on Python 3.11.15 and 3.14.7.
+Final review round 1 caught double-BOM file handling and noted literal newline
+translation; both are corrected with entry/import regressions. Round 2 reviews
+the corrections before landing. All 13 examples and 23 guide snippets passed.
 Review transport files remain in `/tmp/tenioha-audit-YEdpGq` and local `.tincan/`
 (excluded from git). Do not repeat the original full-project review.
 
