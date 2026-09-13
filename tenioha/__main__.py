@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     except Diagnostic as error:
         print(error.render(), file=sys.stderr)
         return 1
-    except (OSError, UnicodeError) as error:
+    except (OSError, UnicodeError, ValueError) as error:
         print(f"tenioha: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

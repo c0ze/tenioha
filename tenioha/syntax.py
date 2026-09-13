@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
+from functools import cached_property
 import re
 import unicodedata
 
@@ -11,12 +13,17 @@ PARTICLES = frozenset({"が", "を", "に", "で", "から", "へ", "と", "ま�
 RESERVED = frozenset({"は", "の", "て", "なら"})
 KEYWORDS = frozenset({"関数", "手続き", "もし", "そうでなければ", "型", "場合", "参照", "適用", "取込", "別名"})
 MAX_NESTING = 128
+LINE_BREAK = re.compile(r"\r\n|[\n\r\u0085\u2028\u2029]")
 
 
 @dataclass(frozen=True)
 class Source:
     text: str
     name: str = "<input>"
+
+    @cached_property
+    def line_starts(self) -> tuple[int, ...]:
+        return (0, *(match.end() for match in LINE_BREAK.finditer(self.text)))
 
 
 @dataclass(frozen=True)
@@ -27,16 +34,18 @@ class Span:
 
     @property
     def line(self) -> int:
-        return self.source.text.count("\n", 0, self.start) + 1
+        return bisect_right(self.source.line_starts, self.start)
 
     @property
     def column(self) -> int:
-        return self.start - self.source.text.rfind("\n", 0, self.start)
+        return self.start - self.source.line_starts[self.line - 1] + 1
 
 
 def _display_width(text: str) -> int:
     width = 0
     for char in text:
+        if char == "\ufeff":
+            continue
         if char == "\t":
             width += 4 - width % 4
         elif not unicodedata.combining(char):
@@ -51,10 +60,9 @@ class Diagnostic(Exception):
 
     def render(self) -> str:
         text, start, end = self.span.source.text, self.span.start, self.span.end
-        line_start = text.rfind("\n", 0, start) + 1
-        line_end = text.find("\n", start)
-        if line_end < 0:
-            line_end = len(text)
+        line_start = self.span.source.line_starts[self.span.line - 1]
+        line_break = LINE_BREAK.search(text, line_start)
+        line_end = line_break.start() if line_break else len(text)
         prefix = text[line_start:start]
         width = max(1, _display_width(text[line_start:min(end, line_end)])
                     - _display_width(prefix))
@@ -81,7 +89,9 @@ class Token:
 
 
 def tokenize(source: Source) -> tuple[Token, ...]:
-    text, tokens, pos = source.text, [], 0
+    text, tokens = source.text, []
+    # Accept one initial BOM without changing the offsets in the original source.
+    pos = 1 if text.startswith("\ufeff") else 0
     punctuation = {"(": "OPEN", ")": "CLOSE", "。": "STOP", "{": "BLOCK_OPEN",
                    "}": "BLOCK_CLOSE", ":": "COLON", "<": "TYPE_OPEN", ">": "TYPE_CLOSE",
                    "[": "SQUARE_OPEN", "]": "SQUARE_CLOSE", ",": "COMMA", ".": "DOT", "|": "ALTERNATIVE"}
@@ -93,8 +103,8 @@ def tokenize(source: Source) -> tuple[Token, ...]:
             pos += 1
             continue
         if char == ";":
-            newline = text.find("\n", pos)
-            pos = len(text) if newline < 0 else newline
+            newline = LINE_BREAK.search(text, pos)
+            pos = len(text) if newline is None else newline.end()
             continue
         start = pos
         if text.startswith("->", pos):
@@ -590,7 +600,7 @@ class Parser:
         if (token.kind == "KEYWORD" and token.value in {"関数", "手続き"}
                 and self.tokens[self.pos + 1].kind != "NAME"):
             return self.closure(depth)
-        if token.kind == "KEYWORD" and token.value in {"関数", "手続き", "型", "取込"}:
+        if token.kind == "KEYWORD" and token.value in {"関数", "手続き", "型", "取込", "別名"}:
             raise Diagnostic("E_DEFINITION", "Declarations and imports are only allowed at file scope.", token.span)
         if token.kind == "RESERVED":
             raise Diagnostic("E_RESERVED", f"{token.value} is a syntax word, not a value or argument label.", token.span)

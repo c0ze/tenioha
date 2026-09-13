@@ -354,7 +354,7 @@ class Checker:
             if role in seen:
                 duplicates.append((particle, span))
             seen.add(role)
-        missing = [p.particle for p in parameters if p.particle not in seen]
+        missing = ["|".join(sorted(p.choices)) for p in parameters if p.particle not in seen]
         unexpected = [(p, span) for p, span in supplied if p not in canonical]
         if duplicates or missing or unexpected:
             details = []

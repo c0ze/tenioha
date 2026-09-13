@@ -181,7 +181,17 @@ class AliasTests(unittest.TestCase):
         self.error("型 箱 { 空 } 別名 新名 は 箱", "E_ALIAS")
 
     def test_name_aliases_are_file_scoped(self):
-        self.error("{ 別名 新名 は 足す }", "E_SYNTAX")
+        for source in ["{ 別名 新名 は 足す }", "関数 甲 -> 整数 { 別名 新名 は 足す。1 }",
+                       "もし 真 なら { 別名 新名 は 足す } そうでなければ {}"]:
+            with self.subTest(source=source):
+                self.error(source, "E_DEFINITION")
+
+    def test_direct_and_indirect_missing_roles_list_the_same_choices(self):
+        declaration = "関数 受ける (値:整数)へ|に -> 整数 { 値 }"
+        for head in ["受ける", "適用 参照 受ける"]:
+            with self.subTest(head=head):
+                error = self.error(declaration + f"({head})", "E_ARGUMENTS")
+                self.assertEqual(error.message.split(": ", 1)[1], "missing: に|へ.")
 
     def test_long_alias_chains_use_no_python_recursion(self):
         source = "\n".join(f"別名 名前{i} は 名前{i+1}。" for i in range(1500))
