@@ -7,7 +7,7 @@ existing interpreter, without changing its semantics.
 
 ## Use it
 
-Select any of the 18 examples, edit its source, and choose **Run code**. The
+Select any of the 23 examples, edit its source, and choose **Run code**. The
 playground prints explicit output, then echoes non-unit expression results like
 `--eval`. **Check** checks all bodies and imports without executing program I/O.
 Use Ctrl+Enter (Command+Enter on macOS) while the editor is focused to run.

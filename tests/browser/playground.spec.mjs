@@ -31,7 +31,7 @@ test.describe.serial("Tenioha in a real browser", () => {
     const catalog = await page.evaluate(async () =>
       (await fetch("./examples.json")).json(),
     );
-    expect(catalog).toHaveLength(18);
+    expect(catalog).toHaveLength(23);
     for (const example of catalog) {
       await page.locator("#example").selectOption(example.id);
       await run();

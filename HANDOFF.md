@@ -61,6 +61,19 @@ run produced 0 through 89 with no page or console errors. No implementation,
 review, or publication work remains. See
 [PLAYGROUND.md](docs/PLAYGROUND.md) for building, serving, tests, and deployment.
 
+A later continuation added **five more teaching examples** on top of that
+catalog: `times_table.ten` (the 9x9 九九, nested recursion building each row as
+text), `power.ten` (exponentiation by squaring), `binary.ten` (base-2 text built
+by recursion on the quotient), `palindrome.ten` (digit reversal with an
+accumulator), and `sort.ten` (insertion sort over `lib/list.ten`, with a
+floor-division `未満` because the builtins provide integer equality only).
+Each has its `.out` fixture and a `site/catalog.json` entry, bringing the catalog
+to 23. Six property tests in `tests/test_algorithms.py` check them against
+independent Python implementations over wide domains, including all nonnegative
+`未満` pairs below 25 and 41 random lists through the sort. `evaluate` in that
+file now passes `filename` so an example's relative imports resolve, as the CLI
+does. No language, interpreter, or site code changed.
+
 ## Milestones
 
 | Milestone | Status | Scope |
@@ -156,9 +169,11 @@ review, or publication work remains. See
 
 ## Verification
 
-Latest verification: **335 tests passed on Python 3.11.15 and 3.14.7** on
-2026-09-14. This includes the 322-test audited baseline and 13 algorithm/adapter/
-site-build tests. **Nine Chromium browser tests pass**, including every bundled
+Latest verification: **341 tests passed on Python 3.11.15 and 3.14.3** after the
+five added examples, on 2026-09-14; the preceding 335-test run covered 3.11.15 and
+3.14.7. This includes the 322-test audited baseline and 19 algorithm/adapter/
+site-build tests. The nine Chromium browser tests pass against the rebuilt
+23-example site. **Nine Chromium browser tests pass**, including every bundled
 example through the real Pyodide runtime. `git diff --check` passed.
 The same browser suite also passed on the live GitHub Pages site on 2026-09-14.
 Screenshots from local desktop/mobile checks and the live site are in
@@ -202,7 +217,7 @@ inside nested blocks, type errors before I/O, one initial BOM across input
 paths, double-BOM rejection, literal newline preservation, six source line
 boundaries, original diagnostic offsets, and invalid entry filenames.
 
-All eighteen example files ran with their expected `.out` fixtures and passed
+All twenty-three example files ran with their expected `.out` fixtures and passed
 `--check`, including both greeting input fixtures. Selected examples:
 
 | Example | Output |

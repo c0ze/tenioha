@@ -30,6 +30,36 @@
     "description": "Start at 7, halve even numbers, and triple odd numbers then add one. Try another small positive starting number. Long sequences may reach the call or time limit."
   },
   {
+    "id": "times_table",
+    "title": "Multiplication table",
+    "topic": "Nested recursion",
+    "description": "The 9x9 table (九九). One recursion walks the columns of a row and builds its text; another walks the rows. Change the final range to print fewer or more rows."
+  },
+  {
+    "id": "power",
+    "title": "Exponentiation by squaring",
+    "topic": "Recursion",
+    "description": "Raise a base to a power with one recursive call per bit of the exponent, rather than one per unit. べき乗 expects a nonnegative exponent."
+  },
+  {
+    "id": "binary",
+    "title": "Binary representation",
+    "topic": "Text building",
+    "description": "Convert a nonnegative integer to binary by concatenating the quotient's digits ahead of the current remainder. Try another number in the final calls."
+  },
+  {
+    "id": "palindrome",
+    "title": "Palindromic numbers",
+    "topic": "Digits",
+    "description": "Reverse a number's digits with an accumulator and compare it with the original. Nonnegative integers only; trailing zeros disappear when reversed, as 90 shows."
+  },
+  {
+    "id": "sort",
+    "title": "Insertion sort",
+    "topic": "Sorting",
+    "description": "Sort a list from the shared library by inserting each element into a sorted tail. 未満 compares nonnegative integers through floor division, since the builtins provide equality only."
+  },
+  {
     "id": "hello",
     "title": "Hello, world",
     "topic": "Getting started",
