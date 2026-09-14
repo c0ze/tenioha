@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f2e9" />
     <meta
       name="description"
-      content="Tenioha is an experimental functional language with typed Japanese particles. Learn the idea and run Fibonacci, FizzBuzz, and more in your browser."
+      content="Tenioha is an experimental functional language: Japanese particles are checked parts of signatures. Notes, source, and a browser runner for the reference interpreter."
     />
     <title>Tenioha — meaning in the particles</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
@@ -29,7 +29,7 @@
         ></a
       >
       <nav aria-label="Main navigation">
-        <a href="#idea">The idea</a><a href="#playground">Playground</a
+        <a href="#idea">The idea</a><a href="#playground">Interpreter</a
         ><a href="#examples">Examples</a>
         <a class="repo-link" href="https://github.com/c0ze/tenioha"
           >GitHub <span aria-hidden="true">↗</span></a
@@ -41,30 +41,34 @@
       <section class="hero wrap" id="idea" aria-labelledby="hero-title">
         <div class="hero-copy">
           <div class="eyebrow">
-            <span class="status-dot"></span> An experiment in language & code
+            <span class="status-dot"></span> Reference interpreter
             <span class="version">v{{VERSION}}</span>
           </div>
           <h1 id="hero-title">Meaning lives<br />in the <em>particles.</em></h1>
           <p class="hero-description">
-            A small functional language where Japanese particles give arguments
-            their roles. Move the words. Keep the meaning.
+            Japanese particles mark argument roles. Tenioha puts those particles
+            in the type signature, so
+            <code>(5 から 3 を 引く)</code> and
+            <code>(3 を 5 から 引く)</code> are the same call.
+            After Kip; not a translation of Turkish case. Nadesiko already has
+            particle arguments in Japanese.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#playground"
-              >Write your first line <span aria-hidden="true">↓</span></a
+              >Open the interpreter <span aria-hidden="true">↓</span></a
             ><a
               class="text-link"
               href="https://github.com/c0ze/tenioha/blob/master/docs/LANGUAGE.md"
-              >Read the language guide <span aria-hidden="true">↗</span></a
+              >Language notes <span aria-hidden="true">↗</span></a
             >
           </div>
           <p class="hero-note">
-            Source on GitHub. No install needed to explore.
+            Python 3.11+, no packages. This page runs the same interpreter through Pyodide.
           </p>
         </div>
         <div class="language-sheet" aria-label="Argument order demonstration">
           <div class="sheet-top">
-            <span>ことば → code</span><span>FIELD NOTE / 001</span>
+            <span lang="ja">引く</span><span>example call</span>
           </div>
           <div class="japanese-title" lang="ja" aria-hidden="true">
             て<span>に</span>を<span>は</span><span class="title-stop">。</span>
@@ -101,20 +105,22 @@
         <div>
           <span class="principle-number">01</span>
           <p>
-            <strong>Roles, checked.</strong> Particles are part of the
-            signature.
+            <strong>Particles are labels.</strong> Checked on the call,
+            not a permanent case on the value.
           </p>
         </div>
         <div>
           <span class="principle-number">02</span>
           <p>
-            <strong>Effects, explicit.</strong> Pure functions. Ordered I/O.
+            <strong>Effects are declared.</strong>
+            <span lang="ja">関数</span> vs <span lang="ja">手続き</span>. Arguments stay pure.
           </p>
         </div>
         <div>
           <span class="principle-number">03</span>
           <p>
-            <strong>Small, expressive.</strong> Types, closures, and patterns.
+            <strong>Small functional core.</strong>
+            Immutable bindings, types, closures, exhaustive match.
           </p>
         </div>
       </div>
@@ -126,16 +132,17 @@
       >
         <div class="section-heading">
           <div>
-            <div class="eyebrow">THE PLAYGROUND</div>
-            <h2 id="playground-title">A little code. A new way to read it.</h2>
+            <div class="eyebrow">INTERPRETER</div>
+            <h2 id="playground-title">Same interpreter as the CLI</h2>
           </div>
           <span class="local-badge"
-            ><span class="status-dot"></span> Runs in your browser</span
+            ><span class="status-dot"></span> Pyodide, this tab</span
           >
         </div>
         <p class="section-intro">
-          Pick an example, change a line, and see what happens. The same
-          interpreter powers the command line and this playground.
+          Programs from <code>examples/</code> run here in a disposable worker.
+          Same checker and evaluator as <code>python -m tenioha</code>.
+          First load fetches Pyodide; after that it stays in the tab.
         </p>
         <noscript
           ><p class="notice">
@@ -202,9 +209,7 @@
                 aria-label="Program output"
               >
                 <pre id="output" class="output-placeholder">
-A sequence starts with a single step.
-
-Run the example to see its output.</pre>
+Output from 表示する appears here after a run.</pre>
                 <pre id="error" hidden></pre>
               </div>
               <div class="console-footer">
@@ -232,7 +237,7 @@ Run the example to see its output.</pre>
               >
                 Check</button
               ><button id="run" class="button primary" type="button" disabled>
-                Run code <span aria-hidden="true">▶</span>
+                Run <span aria-hidden="true">▶</span>
               </button>
             </div>
           </div>
@@ -249,7 +254,7 @@ Run the example to see its output.</pre>
           stop after 10 seconds; output is limited to 64,000 characters.
           <a
             href="https://github.com/c0ze/tenioha/blob/master/docs/PLAYGROUND.md"
-            >How it works ↗</a
+            >Runner notes ↗</a
           >
         </p>
       </section>
@@ -261,8 +266,8 @@ Run the example to see its output.</pre>
       >
         <div class="section-heading">
           <div>
-            <div class="eyebrow">FAMILIAR PROBLEMS, DIFFERENT WORDS</div>
-            <h2 id="examples-title">Start somewhere you know.</h2>
+            <div class="eyebrow">EXAMPLES</div>
+            <h2 id="examples-title">What the programs are testing</h2>
           </div>
           <a
             class="text-link"
@@ -278,11 +283,11 @@ Run the example to see its output.</pre>
             </div>
             <h3>Fibonacci <span aria-hidden="true">↗</span></h3>
             <p>
-              Two accumulators, one growing sequence. Follow recursion through
-              Japanese argument roles.
+              Recursive <span lang="ja">フィボナッチ</span> with two
+              accumulators. First twelve numbers; change the count in the last call.
             </p>
             <span class="card-footer"
-              >Open in playground <span aria-hidden="true">→</span></span
+              >Load in the interpreter <span aria-hidden="true">→</span></span
             ></a
           >
           <a class="example-card" data-example="fizzbuzz" href="#playground"
@@ -292,11 +297,11 @@ Run the example to see its output.</pre>
             </div>
             <h3>FizzBuzz <span aria-hidden="true">↗</span></h3>
             <p>
-              Count, branch, and print. A familiar exercise that separates pure
-              decisions from their output.
+              1 to 30. A pure function picks the word; a
+              <span lang="ja">手続き</span> prints it. Tests conditionals and declared effects.
             </p>
             <span class="card-footer"
-              >Open in playground <span aria-hidden="true">→</span></span
+              >Load in the interpreter <span aria-hidden="true">→</span></span
             ></a
           >
           <a class="example-card" data-example="primes" href="#playground"
@@ -307,11 +312,11 @@ Run the example to see its output.</pre>
             </div>
             <h3>Prime numbers <span aria-hidden="true">↗</span></h3>
             <p>
-              Ask a precise question of each number. Find the primes with a
-              small, typed predicate.
+              Trial division from 2 to 50.
+              <span lang="ja">素数か</span> is a typed predicate on nonnegative integers.
             </p>
             <span class="card-footer"
-              >Open in playground <span aria-hidden="true">→</span></span
+              >Load in the interpreter <span aria-hidden="true">→</span></span
             ></a
           >
         </div>
@@ -319,41 +324,46 @@ Run the example to see its output.</pre>
 
       <section class="about-section wrap" aria-labelledby="about-title">
         <div>
-          <div class="eyebrow">A LANGUAGE IN THE MAKING</div>
+          <div class="eyebrow">CONTEXT</div>
           <h2 id="about-title">
-            Japanese structure.<br />Functional foundations.
+            What this is,<br />and what it is not.
           </h2>
         </div>
         <div class="about-copy">
           <p>
-            Tenioha explores what happens when the little words in Japanese
-            become checked parts of a program. It brings together immutable
-            bindings, explicit types, lexical closures, algebraic data, and
-            pattern matching.
+            Tenioha is a day-old reference interpreter. Particles are occurrence
+            labels on a signature. The same integer can wear
+            <span lang="ja">から</span> in one call and
+            <span lang="ja">を</span> in the next. There is no morphology
+            engine, no inferred <span lang="ja">が</span>, and
+            <code>5から3を引く</code> is not a program: word boundaries stay explicit.
           </p>
           <p>
-            It’s a controlled programming language, with explicit word
-            boundaries and declared spellings. The aim is to make argument roles
-            visible and worth thinking about.
+            The rest is ordinary functional machinery — immutable
+            <span lang="ja">は</span> bindings, static types, algebraic data,
+            closures, exhaustive match, checked effects. It does not claim
+            those as new. Establishing research novelty would take a literature
+            review that has not been done.
           </p>
           <p class="credits">
-            Inspired by <a href="https://github.com/kip-dili/kip">Kip</a>, with
-            <a href="https://nadesi.com/">Nadesiko</a> as important Japanese
-            prior art. Experimental, actively evolving, and open to curious
-            readers.
+            Read <a href="https://github.com/kip-dili/kip">Kip</a> first
+            (Korkut, Keles, Akdemir 2026).
+            <a href="https://nadesi.com/">Nadesiko</a> already has Japanese
+            particle arguments, reordering, and politeness. This is not a
+            translation of Turkish <code>Case</code>.
           </p>
           <a
             class="text-link"
             href="https://github.com/c0ze/tenioha/blob/master/docs/DESIGN.md"
-            >Explore the design notes ↗</a
+            >Design notes ↗</a
           >
         </div>
       </section>
       <section class="local-section wrap">
         <div>
-          <span class="eyebrow">TAKE IT WITH YOU</span>
-          <h2>Prefer your own terminal?</h2>
-          <p>Python 3.11 or later. No packages to install.</p>
+          <span class="eyebrow">CLI</span>
+          <h2>Run it with Python</h2>
+          <p>3.11 or later. No third-party packages.</p>
         </div>
         <div class="terminal">
           <span>$ git clone https://github.com/c0ze/tenioha.git</span
@@ -365,7 +375,7 @@ Run the example to see its output.</pre>
     <footer class="site-footer wrap">
       <a class="brand" href="./"
         ><span class="brand-mark" lang="ja">て</span><span>tenioha</span></a
-      ><span>Little particles. Plenty to explore.</span>
+      ><span>Experimental. Incomplete. MIT.</span>
       <div>
         <a href="https://github.com/c0ze/tenioha">Source ↗</a
         ><a href="https://github.com/c0ze/tenioha/issues">Feedback ↗</a
